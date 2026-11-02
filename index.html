@@ -309,6 +309,28 @@ textarea.tx{min-height:64px;padding:5px 8px}
   .desk{grid-template-columns:420px minmax(0,1fr)}
   .grid#grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* PC: prompt preview + buttons = one thin bar under a full-width form; click the preview to read it all */
+@media (min-width:900px){
+  .launchgrid{display:block}
+  #actbar{position:static;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px;align-items:center;margin-top:8px}
+  #actbar>div:not(.bub):not(#hint){display:contents}
+  #actbar .go{flex:none;height:34px;font-size:14px;padding:0 20px;box-shadow:2px 2px 0 var(--pa)}
+  #actbar .ib.big{width:34px;height:34px;font-size:15px}
+  #actbar .bub{margin:0;height:34px;padding:0 10px;border-radius:6px;display:flex;flex-direction:row-reverse;align-items:center;gap:6px;min-width:0}
+  #actbar .bub>div:first-child{flex:none;align-items:center}
+  #actbar .bub>div:first-child>.h:first-child,#actbar .bub>div:first-child>span[style*="flex:1"]{display:none}
+  #actbar #chev.hidedesk{display:inline-block;margin-left:2px!important;font-size:13px}
+  #actbar .bub pre{flex:1;min-width:0;margin:0;max-height:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;line-height:1.4}
+  #actbar .bub.open{grid-column:1/-1;order:-1;height:auto;display:block;padding:8px 12px;border-radius:10px}
+  #actbar .bub.open>div:first-child{display:flex}
+  #actbar .bub.open>div:first-child>.h:first-child,#actbar .bub.open>div:first-child>span[style*="flex:1"]{display:inline}
+  #actbar .bub.open pre{white-space:pre-wrap;overflow:auto;max-height:50vh;margin-top:3px}
+  #actbar:has(.bub.open){grid-template-columns:auto auto auto minmax(0,1fr)}
+  #actbar .bub.open{order:5;max-height:calc(100vh - 660px);min-height:120px;overflow:auto}
+  #hint{grid-column:1/-1;margin:0!important}
+  #hint:empty{display:none}
+}
 </style>
 </head>
 <body>
