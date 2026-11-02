@@ -227,6 +227,76 @@ textarea.tx{min-height:64px;padding:5px 8px}
   #actbar .go{height:30px;font-size:13px}
   #actbar .ib.big{width:30px;height:30px;font-size:14px}
 }
+
+/* PC only: middle size (user 2026-11-02: "now pc too small"). The phone rules above stay as they are. */
+@media (min-width:900px){
+  html,body{font-size:15px;line-height:1.4}
+  .app{max-width:1400px;padding:10px 16px}
+  .top{margin-bottom:8px;gap:8px}
+  .top>.h{font-size:19px!important}
+  .mono{font-size:13px}
+  .nav button{padding:5px 12px;font-size:14px}
+  .nav button i{font-size:16px}
+  .desk{grid-template-columns:280px minmax(0,1fr);gap:16px}
+  #side{top:10px;max-height:calc(100vh - 66px)}
+  .tx{height:36px;font-size:15px;padding:0 10px}
+  textarea.tx{min-height:90px;padding:7px 10px}
+  #q{height:36px}
+  #catbar{gap:6px;margin-bottom:6px}
+  #catbar select{height:34px;font-size:13px}
+  #qres{font-size:13px;margin:4px 0!important}
+  .grid#grid{gap:3px}
+  .t{padding:5px 8px!important;gap:7px}
+  .t .ic{font-size:17px}
+  .t .nm{font-size:14px}
+  .t .md{font-size:11px}
+  .t .sd{width:8px;height:8px}
+  .gh{font-size:13px;margin-top:9px;padding-bottom:2px;gap:6px}
+  .gh .c{font-size:12px}
+  #lname{font-size:18px!important}
+  #s-trig .h,#s-sync .h,#s-info .h{font-size:17px!important}
+  #s-launch>div:first-child,#s-trig>div:first-child,#s-sync>div:first-child,#s-info>.h{margin-top:0!important;gap:8px!important}
+  #ljobs{margin-top:5px!important}
+  .tag{font-size:14px;padding:4px 12px}
+  .launchgrid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px}
+  .row{padding:6px 10px!important;margin-top:6px!important}
+  .row.fr{grid-template-columns:88px minmax(0,1fr);gap:6px}
+  .row.fr .lb .mono{font-size:13px}
+  .row.fr .fb .tx{height:34px}
+  .n{font-size:14px}
+  .sc{gap:6px;padding:2px}
+  .o{min-height:32px!important;font-size:14px;padding:0 11px;gap:6px}
+  .dot{width:20px;height:20px;font-size:11px}
+  .bub{border-radius:14px;padding:9px 13px;margin-top:6px}
+  .bub pre{font-size:13px;line-height:1.5;margin-top:3px}
+  .bub .h{font-size:12px!important}
+  #actbar .go,.go{height:40px;font-size:16px;box-shadow:3px 3px 0 var(--pa)}
+  #actbar .ib.big,.ib.big{width:40px;height:40px;font-size:17px}
+  .ib{width:34px;height:34px;font-size:16px}
+  #hint{font-size:13px;margin-top:4px!important}
+  #presets .tag{font-size:13px}
+  .launchgrid>div>.mono{margin-top:8px!important}
+  .seg button{padding:7px 0;font-size:14px}
+  .chip{font-size:14px;padding:4px 9px;gap:6px;margin:0 5px 5px 0}
+  .chip button{font-size:14px}
+  #tfam{height:36px}
+  #tmode,#tfam{margin-top:4px!important}
+  #s-trig .mono[style*="margin-top"]{margin-top:8px!important}
+  #tbar{margin-top:8px!important}
+  #s-sync,#s-trig,#s-info{max-width:860px}
+  .card{padding:6px 10px}
+  #scount{margin-top:6px!important;gap:6px!important}
+  #scount .h{font-size:18px!important}
+  #scount .mono{font-size:12px!important}
+  #s-sync>div[style*="display:flex"]{margin-top:8px!important}
+  .srow{padding:6px 10px;margin-top:5px;gap:8px}
+  .srow .nm{font-size:14px}
+  .srow .act{font-size:13px;margin-top:1px}
+  .pill{font-size:12px;padding:1px 7px}
+  .log{font-size:13px;padding:8px 10px;margin-top:6px;max-height:160px}
+  .warn,.note{font-size:14px;padding:6px 10px;margin-top:6px}
+  .toast{font-size:14px;padding:7px 14px;bottom:18px}
+}
 </style>
 </head>
 <body>
