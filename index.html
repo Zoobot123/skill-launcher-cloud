@@ -331,6 +331,25 @@ textarea.tx{min-height:64px;padding:5px 8px}
   #hint{grid-column:1/-1;margin:0!important}
   #hint:empty{display:none}
 }
+
+/* the skill list is what the user looks at most: full names, big and bright (user 2026-11-02) */
+.t.dim{opacity:1}
+.t.dim .nm{color:var(--mu)}
+.t .nm{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.2;color:var(--pa);font-weight:700}
+.t .md{color:var(--y)}
+@media (max-width:899px){
+  #grid{max-height:210px}
+  #grid .t{padding:4px 6px!important;min-height:27px!important}
+  #grid .t .nm{font-size:13px}
+  #grid .t .md{display:inline}
+}
+@media (min-width:900px){
+  .desk{grid-template-columns:minmax(440px,44%) minmax(0,1fr)}
+  .grid#grid{gap:4px}
+  .t{padding:7px 10px!important;min-height:36px!important;gap:8px}
+  .t .ic{font-size:18px}
+  .t .nm{font-size:15px}
+}
 </style>
 </head>
 <body>
@@ -525,7 +544,7 @@ function setFilter(f,p){S.fam=f;S.place=p;store.set("sklc.filter",{fam:f,place:p
 function grid(){const q=S.q.toLowerCase().trim(),hit=q?fires(q):[],hs=hit.map(h=>h[0]);
   const inPlace=s=>S.place==="all"||(S.place==="library")===(s.mode==="library");
   const list=q?S.skills.filter(s=>s.name.includes(q)||hs.includes(s)||fam(s.family)[1].toLowerCase().includes(q)):S.skills.filter(s=>inPlace(s)&&(!S.fam||s.family===S.fam));
-  const tile=s=>`<button class="t${hs.includes(s)?(hs.length>1?" clash":" hit"):""}${S.sk&&s.name===S.sk.name&&!q?" hit":""}${s.mode==="library"?" dim":""}" data-n="${esc(s.name)}" style="--c:${s.color}"><i class="ti ${s.icon} ic"></i><div class="nm">${esc(s.name)}</div><span class="md">${s.mode}</span></button>`;
+  const tile=s=>`<button class="t${hs.includes(s)?(hs.length>1?" clash":" hit"):""}${S.sk&&s.name===S.sk.name&&!q?" hit":""}${s.mode==="library"?" dim":""}" data-n="${esc(s.name)}" style="--c:${s.color}"><i class="ti ${s.icon} ic"></i><div class="nm">${esc(s.name)}</div>${s.mode==="auto"||s.mode==="library"?"":`<span class="md">${s.mode}</span>`}</button>`;
   let html;if(WIDE.matches&&!q&&!S.fam)html=FAMILIES.map(f=>{const it=list.filter(s=>s.family===f[0]);return it.length?`<div class="gh" style="color:${f[3]}"><span>${f[2]}</span><span>${esc(f[1])}</span><span class="c">${it.length}</span></div>`+it.map(tile).join(""):""}).join("");else html=list.map(tile).join("");
   const gst=$("grid").scrollTop;$("grid").innerHTML=html||`<div class="empty" style="grid-column:1/-1">${q?"No skill matches.":"No skill here. Try All skills."}</div>`;
   $("grid").scrollTop=gst;const sq=S.skills.filter(inPlace),nOn=S.skills.filter(s=>s.mode!=="library").length;
