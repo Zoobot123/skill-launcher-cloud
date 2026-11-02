@@ -204,6 +204,29 @@ textarea.tx{min-height:64px;padding:5px 8px}
   .nav button{flex-direction:row;justify-content:center;gap:4px;padding:6px 0 7px}
   .app{padding-bottom:40px}
 }
+
+/* phone: prompt preview + buttons = one thin bar; tap the preview to read it all */
+@media (max-width:899px){
+  #actbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:3px;align-items:center;padding:2px 0}
+  #actbar>div:not(.bub):not(#hint){display:contents}
+  #actbar .go{flex:none;height:28px;font-size:11px;padding:0 8px;box-shadow:none}
+  #actbar .ib.big{width:28px;height:28px;font-size:13px}
+  #actbar .bub{margin:0;height:28px;padding:0 6px;border-radius:5px;display:flex;flex-direction:row-reverse;align-items:center;gap:4px;min-width:0}
+  #actbar .bub>div:first-child{flex:none;align-items:center}
+  #actbar .bub>div:first-child>.h:first-child,#actbar .bub>div:first-child>span[style*="flex:1"]{display:none}
+  #actbar .bub>div:first-child i{margin-left:2px!important;font-size:12px}
+  #actbar .bub pre{flex:1;min-width:0;margin:0;max-height:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+  #actbar .bub.open{grid-column:1/-1;order:-1;height:auto;display:block;padding:5px 8px;border-radius:8px}
+  #actbar .bub.open>div:first-child{display:flex}
+  #actbar .bub.open>div:first-child>.h:first-child,#actbar .bub.open>div:first-child>span[style*="flex:1"]{display:inline}
+  #actbar .bub.open pre{white-space:pre-wrap;overflow:auto;max-height:45vh;margin-top:2px}
+  #hint{grid-column:1/-1;margin:0!important}
+  #hint:empty{display:none}
+}
+@media (min-width:900px){
+  #actbar .go{height:30px;font-size:13px}
+  #actbar .ib.big{width:30px;height:30px;font-size:14px}
+}
 </style>
 </head>
 <body>
