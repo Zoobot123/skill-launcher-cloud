@@ -297,6 +297,18 @@ textarea.tx{min-height:64px;padding:5px 8px}
   .warn,.note{font-size:14px;padding:6px 10px;margin-top:6px}
   .toast{font-size:14px;padding:7px 14px;bottom:18px}
 }
+
+/* skill list: 2 columns, up-and-down (user 2026-11-02: "hundred of skill and you give a sliders? add it as a 2 coluum list") */
+@media (max-width:899px){
+  #grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;overflow-x:hidden;overflow-y:auto;max-height:141px;scrollbar-width:thin;padding:0}
+  #grid::-webkit-scrollbar{display:block;width:4px}
+  #grid::-webkit-scrollbar-thumb{background:var(--gt)}
+  #grid .t{width:auto;max-width:none}
+}
+@media (min-width:900px){
+  .desk{grid-template-columns:420px minmax(0,1fr)}
+  .grid#grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
@@ -493,8 +505,8 @@ function grid(){const q=S.q.toLowerCase().trim(),hit=q?fires(q):[],hs=hit.map(h=
   const list=q?S.skills.filter(s=>s.name.includes(q)||hs.includes(s)||fam(s.family)[1].toLowerCase().includes(q)):S.skills.filter(s=>inPlace(s)&&(!S.fam||s.family===S.fam));
   const tile=s=>`<button class="t${hs.includes(s)?(hs.length>1?" clash":" hit"):""}${S.sk&&s.name===S.sk.name&&!q?" hit":""}${s.mode==="library"?" dim":""}" data-n="${esc(s.name)}" style="--c:${s.color}"><i class="ti ${s.icon} ic"></i><div class="nm">${esc(s.name)}</div><span class="md">${s.mode}</span></button>`;
   let html;if(WIDE.matches&&!q&&!S.fam)html=FAMILIES.map(f=>{const it=list.filter(s=>s.family===f[0]);return it.length?`<div class="gh" style="color:${f[3]}"><span>${f[2]}</span><span>${esc(f[1])}</span><span class="c">${it.length}</span></div>`+it.map(tile).join(""):""}).join("");else html=list.map(tile).join("");
-  $("grid").innerHTML=html||`<div class="empty" style="grid-column:1/-1">${q?"No skill matches.":"No skill here. Try All skills."}</div>`;
-  const sq=S.skills.filter(inPlace),nOn=S.skills.filter(s=>s.mode!=="library").length;
+  const gst=$("grid").scrollTop;$("grid").innerHTML=html||`<div class="empty" style="grid-column:1/-1">${q?"No skill matches.":"No skill here. Try All skills."}</div>`;
+  $("grid").scrollTop=gst;const sq=S.skills.filter(inPlace),nOn=S.skills.filter(s=>s.mode!=="library").length;
   $("catbar").style.display=q?"none":"";
   $("places").innerHTML=[["on","Loaded",nOn],["library","Library",S.skills.length-nOn],["all","All skills",S.skills.length]].map(([k,l,n])=>`<option value="${k}"${S.place===k?" selected":""}>${l} (${n})</option>`).join("");
   $("cats").innerHTML=`<option value="">All categories (${sq.length})</option>`+FAMILIES.map(f=>{const n=sq.filter(s=>s.family===f[0]).length;return n||S.fam===f[0]?`<option value="${f[0]}"${S.fam===f[0]?" selected":""}>${f[2]} ${esc(f[1])} (${n})</option>`:""}).join("");
