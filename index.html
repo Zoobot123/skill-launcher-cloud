@@ -401,12 +401,19 @@ textarea.tx{min-height:64px;padding:5px 8px}
               <pre id="out"></pre>
             </div>
             <div style="display:flex;gap:8px;margin-top:10px">
-              <button class="go" id="go" title="Copies the prompt and opens Claude on the web">COPY + CLAUDE</button>
+              <button class="go" id="go" title="Copies the prompt">COPY</button>
               <button class="ib big" id="save" aria-label="Save preset" title="Save preset"><i class="ti ti-star"></i></button>
             </div>
             <div class="mono" id="hint" style="text-align:center;margin-top:4px;min-height:18px"></div>
           </div>
           <div><div class="mono" style="margin-top:8px">Presets</div><div class="sc" id="presets"></div></div>
+          <details class="row" id="bbox" hidden><summary class="mono" style="cursor:pointer;color:var(--pa);font-weight:700">Edit brief (the text COPY gives Claude)</summary>
+            <div class="mono" style="margin-top:6px;color:var(--dim)">Tap a name to put it in the text. A line is left out when its field is empty.</div>
+            <div class="sc" id="bchips" style="margin-top:4px"></div>
+            <textarea class="tx" id="bta" spellcheck="false" style="margin-top:6px;min-height:240px;font-family:var(--m);font-size:12px;line-height:1.4"></textarea>
+            <div class="mono" id="bmsg" style="margin-top:4px;min-height:16px"></div>
+            <div style="display:flex;gap:8px;margin-top:6px"><button class="o" id="bsave">Save to GitHub</button><button class="o" id="breset">Reset to default</button></div>
+          </details>
         </div>
       </section>
 
@@ -568,7 +575,7 @@ let qT;$("q").oninput=e=>{S.q=e.target.value;clearTimeout(qT);qT=setTimeout(grid
 function pick(n){const s=S.skills.find(x=>x.name===n);if(!s)return;S.sk=s;S.ed=null;S.v={};S.job=null;S.form=null;S.q="";$("q").value="";grid();if(S.scr==="trig")trig();else{if(S.scr==="info")go("launch");else loadForm()}}
 
 /* ---------------- launch ---------------- */
-async function loadForm(){const s=S.sk;if(!s)return;$("s-launch").style.setProperty("--a",s.color);$("lname").textContent=s.name;
+async function loadForm(){const s=S.sk;if(!s)return;S.bkey=null;$("s-launch").style.setProperty("--a",s.color);$("lname").textContent=s.name;
   $("lform").innerHTML='<div class="empty" style="margin-top:8px">Loading form…</div>';let d=null;
   try{const e=S.tree.find(x=>x.path===`${s.area}/${s.name}/launcher.json`);if(e)d=JSON.parse(await readText(e.sha))}catch(err){$("lform").innerHTML=`<div class="warn">${esc(err.message)}</div>`;return}
   if(S.sk!==s)return;
@@ -596,19 +603,41 @@ function launch(){const j=curJob();
   $("presets").innerHTML=ps.length?ps.map((p,i)=>`<button class="tag" data-p="${i}" style="transform:none"><i class="ti ti-star"></i> ${esc(p.name)}</button><button class="tag" data-px="${i}" style="transform:none;padding:6px 7px" aria-label="Delete preset"><i class="ti ti-x"></i></button>`).join(""):'<span class="mono" style="color:var(--dim)">None yet. Fill the form and tap the star.</span>';
   $("presets").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=ps[b.dataset.p];if(p.job)S.job=p.job;S.v={...p.v};launch();toast("Preset loaded")});
   $("presets").querySelectorAll("[data-px]").forEach(b=>b.onclick=()=>{ps.splice(b.dataset.px,1);presets[S.sk.name]=ps;store.set("sklc.presets",presets);launch()});
-  prompt()}
-function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[];const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
+  briefUI();prompt()}
+/* ---------------- edit brief (the text COPY gives Claude) ---------------- */
+function briefUI(){const box=$("bbox");if(S.form.fallback){box.hidden=true;return}box.hidden=false;const j=curJob(),key=S.sk.name+"|"+j.id;
+  if(S.bkey!==key){S.bkey=key;$("bta").value=j.brief||"";$("bmsg").textContent=""}
+  $("bchips").innerHTML=["skill","repo"].concat((j.fields||[]).map(f=>f.id)).map(k=>`<button class="tag" data-ph="${esc(k)}" style="transform:none">{{${esc(k)}}}</button>`).join("");
+  $("bchips").querySelectorAll("[data-ph]").forEach(b=>b.onclick=()=>{const t=$("bta"),a=t.selectionStart,e=t.selectionEnd,x="{{"+b.dataset.ph+"}}";t.value=t.value.slice(0,a)+x+t.value.slice(e);t.selectionStart=t.selectionEnd=a+x.length;t.focus();t.oninput()});
+  $("breset").hidden=!j.brief_default}
+function briefCheck(txt,j){const ok=new Set(["skill","repo"].concat((j.fields||[]).map(f=>f.id)));
+  const bad=[...new Set([...txt.matchAll(/\{\{(\w+)\}\}/g)].map(m=>m[1]).filter(k=>!ok.has(k)))];
+  if(bad.length)return "Unknown name: "+bad.map(b=>"{{"+b+"}}").join(", ");
+  if(/\{\{|\}\}/.test(txt.replace(/\{\{\w+\}\}/g,"")))return "A {{ or }} is not closed.";
+  if(KEYS.test(txt))return "That text has a key in it. Remove it first.";
+  if(txt.length>12000)return `The brief is ${txt.length} characters; the limit is 12000.`;return ""}
+$("bta").oninput=()=>{const j=curJob(),txt=$("bta").value;j.brief=txt;const e=briefCheck(txt,j);$("bmsg").textContent=e;$("bmsg").style.color=e?"#FF7A6B":"";prompt()};
+$("breset").onclick=()=>{const j=curJob();if(!j.brief_default)return;$("bta").value=j.brief_default;$("bta").oninput();toast("Default text back. Tap Save to keep it.")};
+$("bsave").onclick=()=>busy($("bsave"),async()=>{const s=S.sk,jid=S.job,txt=$("bta").value.split(String.fromCharCode(13)).join("");
+  const err=briefCheck(txt,curJob());if(err)throw new Error(err);
+  const path=`${s.area}/${s.name}/launcher.json`,h=await readHead(),t=await gh(`${R}/git/trees/${h.tree}?recursive=1`),e=t.tree.find(x=>x.path===path&&x.type==="blob");
+  if(!e)throw new Error("launcher.json is not in GitHub.");
+  const d=JSON.parse(await readText(e.sha)),j=(d.jobs||[]).find(x=>x.id===jid);if(!j)throw new Error("This job is not in launcher.json any more. Reload.");
+  if(txt.trim()){if(j.brief&&j.brief_default==null)j.brief_default=j.brief;j.brief=txt}else delete j.brief;
+  await commit([{path,content:JSON.stringify(d,null,1)+"\n"}],`${s.name}: brief of ${jid} (cloud)`);toast("Brief saved to GitHub");await loadAll()});
+function fillBrief(t,vals){return t.split("\n").map(l=>{let drop=false;const o=l.replace(/\{\{(\w+)\}\}/g,(m,k)=>{if(vals[k]==null||vals[k]===""){drop=true;return ""}return vals[k]});return drop?null:o}).filter(l=>l!==null).join("\n")}
+function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[],vals={skill:s.path.replace(/\/SKILL\.md$/,""),repo:`github.com/${OWNER}/${REPO}`};const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
   for(const x of fields){const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
     if(v==null||v===""){if(x.required!==undefined?x.required:!["text",undefined].includes(x.type)){missing.push(lab);lines.push(lab.padEnd(w)+"  ?")}continue}
-    v=String(v);if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=o&&o.path?o.path.split(/[\\/]/).pop():"";v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"")}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
+    v=String(v);vals[x.id]=v;if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=o&&o.path?o.path.split(/[\\/]/).pop():"";v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"");vals[x.id]=v}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
     lines.push(lab.padEnd(w)+"  "+v)}
   let head=`Use the ${s.name} skill (read ${s.path} in github.com/${OWNER}/${REPO} first).`;if(!S.form.fallback){head+=` Job: ${j.name.toLowerCase()}.`;if(j.follow)head+=`\nFollow ${j.follow}.`}
   let tail=j.tail||"";if(!S.form.fallback&&fields.some(x=>x.type!=="text"))tail=(tail?tail+" ":"")+"All inputs are answered: do not ask for them again.";
-  const text=head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
+  const text=j.brief&&!S.form.fallback?fillBrief(j.brief,vals):head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
   $("out").textContent=text;$("tk").textContent=Math.round(text.length/4)+" TK";const need=fields.filter(f=>f.required!==undefined?f.required:f.type&&f.type!=="text").length;$("lcount").textContent=need?`${need-missing.length}/${need}`:"";$("hint").textContent=""}
 $("bub").onclick=()=>{S.open=!S.open;$("bub").classList.toggle("open",S.open);$("chev").className="ti ti-chevron-"+(S.open?"up":"down")+" hidedesk"};
 $("go").onclick=async()=>{const p=S.prompt;if(!p)return;if(p.missing.length){$("hint").textContent="Fill "+p.missing.join(", ");$("hint").style.color="#FF7A6B";return}
-  const win=window.open("https://claude.ai/code","_blank","noopener");try{await navigator.clipboard.writeText(p.text);toast("Prompt copied. Paste it in Claude.")}catch(e){toast("Copy is blocked; tap the bubble and copy it by hand",true)}};
+  try{await navigator.clipboard.writeText(p.text);toast("Prompt copied")}catch(e){toast("Copy is blocked; tap the bubble and copy it by hand",true)}};
 $("save").onclick=()=>{const name=Object.values(S.v).filter(x=>x&&!Array.isArray(x)).slice(0,2).join(" · ")||"My preset";(presets[S.sk.name]=presets[S.sk.name]||[]).push({name,job:S.job,v:{...S.v}});store.set("sklc.presets",presets);launch();toast("Preset saved")};
 
 /* ---------------- triggers ---------------- */
