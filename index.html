@@ -1,0 +1,409 @@
+<!doctype html><!-- Agents: read llms.txt next to this page. This page has no server: it edits the GitHub repo directly. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Skill Launcher Cloud</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--ink:#15131C;--pn:#211E2B;--p2:#2B2737;--gt:#3D3850;--pa:#FFF8EE;--mu:#D3CCE3;--dim:#A69FBA;--y:#FFD34E;--li:#B79CFF;--al:#FF7A6B;--ok:#6BE3A0;
+--c:var(--y);--a:var(--y);--d:"Dela Gothic One",sans-serif;--b:"Zen Kaku Gothic New",system-ui,sans-serif;--m:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ink);color:var(--pa);font-family:var(--b);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+.h{font-family:var(--d);font-weight:400;letter-spacing:.01em}
+.mono{font-weight:500;font-size:13px;color:var(--mu)}
+.sr{position:absolute;left:-9999px}
+[hidden]{display:none!important}
+.app{max-width:420px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:12px 12px 78px}
+.top{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.ib{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;background:var(--p2);border:2px solid var(--gt);font-size:16px;cursor:pointer;flex:none}
+.ib.big{width:46px;height:46px;font-size:18px}
+.sc{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px}
+.sc::-webkit-scrollbar{display:none}
+.tag{font-weight:700;font-size:13px;padding:6px 11px;border:2px solid var(--gt);color:var(--mu);background:none;transform:skew(-10deg);white-space:nowrap;cursor:pointer}
+.tag.on{background:var(--pa);color:var(--ink);border-color:var(--pa)}
+.o{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:500;min-height:36px;padding:0 12px;border:2px solid var(--gt);background:var(--p2);color:var(--pa);cursor:pointer;transform:skew(-8deg);white-space:nowrap}
+.o.on{background:var(--a);color:var(--ink);border-color:var(--a);font-weight:700}
+.row{background:var(--pn);border:2px solid var(--gt);padding:8px 10px 7px;margin-top:8px}
+.row.ok{border-color:#5A5470}
+.lb{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.lb .mono{color:var(--pa);font-weight:700}
+.n{font-family:var(--d);font-size:15px;color:var(--dim)}
+.row.ok .n{color:var(--a)}
+.tx{width:100%;background:var(--p2);border:2px solid var(--gt);height:40px;padding:0 12px;outline:none;font-size:15px}
+textarea.tx{height:auto;min-height:90px;padding:8px 12px;resize:vertical;line-height:1.45}
+.tx::placeholder{color:var(--dim)}
+.tx:focus{border-color:var(--a)}
+.dot{width:22px;height:22px;border-radius:50%;font-family:var(--d);font-size:12px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);border:2px solid var(--ink);flex:none}
+.go{flex:1;background:var(--y);color:var(--ink);border:2px solid var(--pa);font-family:var(--d);font-size:17px;height:46px;box-shadow:3px 3px 0 var(--pa);cursor:pointer}
+.go:active{box-shadow:0 0 0 var(--pa);transform:translate(3px,3px)}
+.go[aria-busy=true]{opacity:.6;pointer-events:none}
+.bub{background:var(--pa);color:var(--ink);border-radius:18px;padding:10px 14px;margin-top:10px;cursor:pointer}
+.bub pre{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--m);font-size:13px;line-height:1.5;max-height:40px;overflow:hidden;color:#1E1A28}
+.bub.open pre{max-height:none}
+.bub .h{color:#1E1A28}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.t{background:var(--pn);border:2px solid var(--gt);border-top:3px solid var(--c);padding:9px 8px 20px;cursor:pointer;position:relative;min-height:74px;text-align:left}
+.t.hit{border-color:var(--c)}
+.t.clash{border-color:var(--li)}
+.t.dim{opacity:.6}
+.t .ic{font-size:22px;color:var(--c)}
+.t .nm{font-size:13px;font-weight:700;line-height:1.25;margin-top:5px;overflow-wrap:anywhere;padding-right:4px}
+.t .md{position:absolute;bottom:6px;right:8px;font-size:11px;font-weight:500;color:var(--mu)}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--pn);border-top:2px solid var(--gt);display:flex;justify-content:center;z-index:5;padding-bottom:env(safe-area-inset-bottom)}
+.nav button{flex:1;max-width:140px;background:none;border:0;padding:8px 0 10px;color:var(--mu);font-size:13px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.nav button i{font-size:22px}
+.nav button.on{color:var(--y)}
+.nav .badge{font-size:11px;font-weight:700;background:var(--al);color:var(--ink);padding:0 6px;margin-left:3px}
+.scr{display:none}.scr.on{display:block}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500;padding:5px 10px;border:2px solid var(--gt);background:var(--p2);margin:0 6px 6px 0;max-width:100%}
+.chip.sug{border-style:dashed;color:var(--mu)}
+.chip.not{color:var(--mu)}
+.chip button{background:none;border:0;color:inherit;cursor:pointer;padding:0;font-size:15px;line-height:1}
+.seg{display:flex;border:2px solid var(--gt)}
+.seg button{flex:1;background:none;border:0;padding:9px 0;font-size:14px;font-weight:700;color:var(--mu);cursor:pointer}
+.seg button.on{background:var(--pa);color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(20px);background:var(--y);color:var(--ink);font-family:var(--d);padding:8px 16px;border:2px solid var(--pa);box-shadow:3px 3px 0 var(--pa);opacity:0;transition:.2s;z-index:9;pointer-events:none;max-width:92vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.err{background:var(--al)}
+.empty{border:2px dashed var(--gt);padding:14px;text-align:center;color:var(--mu)}
+.warn{border:2px solid var(--al);padding:8px 10px;margin-top:8px;font-size:14px}
+.note{border:2px solid var(--gt);padding:8px 10px;margin-top:8px;font-size:14px;color:var(--mu)}
+.note a,.warn a,#login a{color:var(--y)}
+.log{background:#0E0C14;border:2px solid var(--gt);font-family:var(--m);font-size:13px;padding:10px;margin-top:8px;overflow-wrap:anywhere;white-space:pre-wrap}
+#catbar{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:6px;margin-bottom:8px}
+#catbar select{cursor:pointer;padding:0 8px;font-weight:700;font-size:14px}
+#catbar option,#tfam option{background:#2B2737;color:#FFF8EE}
+.gh{grid-column:1/-1;display:flex;align-items:center;gap:7px;font-family:var(--d);font-size:13px;margin-top:8px;padding-bottom:3px;border-bottom:2px solid var(--gt)}
+.gh .c{font-family:var(--b);font-weight:500;font-size:12px;color:var(--dim)}
+.gh:first-child{margin-top:0}
+#lalias{order:9;flex-basis:100%}
+@media (min-width:900px){
+  .app{max-width:1180px;padding:18px 24px 24px}
+  .nav{position:static;background:none;border:0;justify-content:flex-start;gap:4px;padding:0}
+  .nav button{flex:none;max-width:none;flex-direction:row;gap:6px;padding:6px 12px;border:2px solid var(--gt);font-size:13px}
+  .nav button i{font-size:16px}
+  .nav button.on{border-color:var(--y)}
+  .desk{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
+  #side{position:sticky;top:12px;max-height:calc(100vh - 90px);overflow:auto;scrollbar-width:thin}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .launchgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:start}
+  #actbar{position:sticky;top:12px}
+  .bub pre{max-height:none}
+  .toast{bottom:30px}
+  .hidedesk{display:none}
+}
+@media (max-width:899px){.onlydesk{display:none!important}
+  #grid{display:flex;overflow-x:auto;scrollbar-width:none;gap:6px;padding-bottom:2px}
+  #grid::-webkit-scrollbar{display:none}
+  #grid .t{flex:none;width:112px;min-height:70px}
+  #grid .empty{flex:1}
+  .row{padding:5px 8px 4px;margin-top:5px}.lb{margin-bottom:2px}
+  .o{min-height:32px}
+  #actbar{position:sticky;bottom:60px;background:var(--ink);padding:2px 0 6px;z-index:3}
+  #actbar .bub{margin-top:6px}
+  #tbar{position:sticky;bottom:60px;background:var(--ink);padding:6px 0;z-index:3}}
+</style>
+</head>
+<body>
+<div class="sr" id="agentNote">Agents: read llms.txt next to this page. Skills live in the GitHub repo; this page has no server.</div>
+
+<div class="app" id="login" hidden>
+  <div class="h" style="font-size:22px;margin:30px 0 10px">Skill Launcher Cloud</div>
+  <p class="mono" style="font-size:15px">Works with your PC off. It edits your skills in GitHub directly. Your token stays in this browser only; it is never sent anywhere except GitHub.</p>
+  <p class="mono" style="font-size:15px">Make a token: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub, fine-grained token</a>. Repository access: only <b>manga-skills</b>. Permission: <b>Contents, read and write</b>.</p>
+  <input class="tx" id="tok" type="password" placeholder="Paste your token" autocomplete="off">
+  <div class="warn" id="loginErr" hidden></div>
+  <div style="display:flex;margin-top:12px"><button class="go" id="loginGo">OPEN MY SKILLS</button></div>
+</div>
+
+<div class="app" id="main" hidden>
+  <header class="top">
+    <span class="h" style="font-size:19px">Skill Launcher</span><span class="mono" style="color:var(--y)">cloud</span>
+    <span style="flex:1"></span>
+    <nav class="nav onlydesk" id="navDesk"></nav>
+    <span class="mono" id="tokTop" title="Skill descriptions Claude reads at session start"></span>
+  </header>
+  <div class="desk">
+    <aside id="side">
+      <input class="tx" id="q" placeholder="Search, or type a prompt to test" autocomplete="off">
+      <div class="mono" id="qres" style="margin:3px 0"></div>
+      <div id="catbar">
+        <select class="tx" id="places" aria-label="Show which skills"></select>
+        <select class="tx" id="cats" aria-label="Category"></select>
+      </div>
+      <div class="grid" id="grid"><div class="empty" style="grid-column:1/-1" id="loading">Reading your skills…</div></div>
+    </aside>
+    <main>
+      <section class="scr on" id="s-launch">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span class="h" style="font-size:18px;overflow-wrap:anywhere" id="lname"></span>
+          <span class="mono" id="lalias"></span><span style="flex:1"></span><span class="mono" id="lcount"></span>
+          <button class="ib" data-trash aria-label="Remove this skill" title="Remove this skill"><i class="ti ti-trash"></i></button>
+        </div>
+        <div class="sc" id="ljobs" style="margin-top:6px"></div>
+        <div class="launchgrid">
+          <div id="lform"></div>
+          <div id="actbar">
+            <div class="bub" id="bub">
+              <div style="display:flex;align-items:center"><span class="h" style="font-size:12px">Claude gets</span><span style="flex:1"></span><span class="h" style="font-size:12px" id="tk"></span><i id="chev" class="ti ti-chevron-down hidedesk" style="margin-left:6px"></i></div>
+              <pre id="out"></pre>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="go" id="go" title="Copies the prompt and opens Claude on the web">COPY + OPEN CLAUDE</button>
+              <button class="ib big" id="save" aria-label="Save preset" title="Save preset"><i class="ti ti-star"></i></button>
+            </div>
+            <div class="mono" id="hint" style="text-align:center;margin-top:4px;min-height:18px"></div>
+          </div>
+          <div><div class="mono" style="margin-top:8px">Presets</div><div class="sc" id="presets"></div></div>
+        </div>
+      </section>
+
+      <section class="scr" id="s-trig">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span class="h" style="font-size:18px">Triggers</span><span class="mono" id="tname"></span><span style="flex:1"></span>
+          <button class="ib" data-trash aria-label="Remove this skill" title="Remove this skill"><i class="ti ti-trash"></i></button>
+        </div>
+        <div class="mono" style="margin-top:8px">Category</div>
+        <select class="tx" id="tfam" style="margin-top:4px" aria-label="Category"></select>
+        <div class="mono" style="margin-top:8px">Load mode</div>
+        <div class="seg" id="tmode" style="margin-top:4px"></div>
+        <div class="mono" id="tmodehelp" style="margin-top:4px;min-height:18px"></div>
+        <div class="row ok"><div class="lb"><span class="n">ON</span><span class="mono">trigger on</span></div><div id="ton"></div>
+          <div style="display:flex;gap:6px"><input class="tx" id="tadd" placeholder="add a phrase"><button class="ib" id="taddb" aria-label="Add phrase"><i class="ti ti-plus"></i></button></div></div>
+        <div class="row"><div class="lb"><span class="n">NOT</span><span class="mono">not for</span></div><div id="tnot"></div>
+          <div style="display:flex;gap:6px"><input class="tx" id="tnadd" placeholder="add a phrase it must ignore"><button class="ib" id="tnaddb" aria-label="Add not-for phrase"><i class="ti ti-plus"></i></button></div></div>
+        <details class="row"><summary class="mono" style="cursor:pointer;color:var(--pa);font-weight:700">Description text (what the skill does)</summary>
+          <textarea class="tx" id="tbody" style="margin-top:6px"></textarea></details>
+        <div class="mono" style="margin-top:10px">What Claude sees at session start</div>
+        <div class="bub open" style="cursor:default"><div style="display:flex"><span class="h" style="font-size:12px">description</span><span style="flex:1"></span><span class="h" style="font-size:12px" id="ttk"></span></div><pre id="tdesc"></pre></div>
+        <div id="tbar" style="display:flex;gap:8px;margin-top:10px"><button class="go" id="tsave">SAVE TO GITHUB</button></div>
+      </section>
+
+      <section class="scr" id="s-info">
+        <div class="h" style="font-size:18px;margin-top:10px">Status</div>
+        <div id="ipend"></div>
+        <div class="note">In the cloud you can search, build prompts, edit triggers, change category, move skills between Loaded and Library, and remove skills. Off, Forced and Sync need the PC.</div>
+        <div class="log" id="ilog"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="tag" id="reload" style="transform:none"><i class="ti ti-refresh"></i> Reload from GitHub</button>
+          <button class="tag" id="logout" style="transform:none"><i class="ti ti-key-off"></i> Forget my token here</button>
+          <a class="tag" href="llms.txt" target="_blank" rel="noopener" style="transform:none;text-decoration:none"><i class="ti ti-robot"></i> For agents</a>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<nav class="nav hidedesk" id="navPhone" hidden></nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const OWNER="Zoobot123",REPO="manga-skills",BRANCH="main",CD=".skill-launcher";
+const params=new URLSearchParams(location.search);
+const LOCAL=["localhost","127.0.0.1"].includes(location.hostname);
+const API=(LOCAL&&params.get("api"))||"https://api.github.com";   // a test server only on this PC
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,"")),c=>c.charCodeAt(0)));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const FAMILIES=[["anima","Anima","🎨","#f472b6",/^anima|^hand-poses$|^comfyui-studio/],["krea2","Krea 2","🌀","#38bdf8",/^krea/],["minimax","MiniMax H3","🧬","#a78bfa",/^minimax/],
+ ["comfy","Image & ComfyUI","🧩","#34d399",/comfy|^qwen|^turbo$|^real-time$|civitai|lora|^pixiv|photoshop|art|icon|image|hair|^flow/],["vision","Vision & audio","👁️","#fbbf24",/vision|caption|^oppai|tag|audio|irodori|music|voice/],
+ ["web","Web & social","🌐","#60a5fa",/search|^ai-web|reddit|^x-|discord|research|chrome|browser|patreon|twitter|monetiz|download|fandom/],["game","Game & 3D","🎮","#fb7185",/com3d2|koikatsu|^vfx|game|unity|blender|mmd|^kk|jrpg|npr|rig/],
+ ["agents","Agents & build","🤖","#22d3ee",/agent|planning|handoff|goal-prompt|n8n|forge|skill|hot-reload|^cl-\d|code|^init$|grok|setup|test/],["writing","Writing & story","✍️","#facc15",/story|translate|slop|nsfw|scene|prompt|18|writ|docs?$|pdf|pptx|xlsx/],["other","Other","✨","#94a3b8",/./]];
+const ICONS={comfy:"ti-topology-star",novelai:"ti-brush",manga:"ti-book-2",search:"ti-search",caption:"ti-text-recognition",vision:"ti-eye",handoff:"ti-transfer","real-time":"ti-bolt",turbo:"ti-rocket",pixiv:"ti-photo-search","x-":"ti-brand-x",game:"ti-device-gamepad-2",web:"ti-world",plan:"ti-list-check",prompt:"ti-message-2",blender:"ti-box",reverse:"ti-binary-tree","18":"ti-flame",slop:"ti-filter",h3:"ti-user-share",minimax:"ti-movie",moss:"ti-layout-board",drive:"ti-cloud",artifact:"ti-zoom-check",orchestra:"ti-music"};
+const CASTCOL=["#B79CFF","#FF7A6B","#5CD6FF","#FF7AB6","#6BE3A0","#FFD34E","#FFA94D","#7FB2FF"];
+const KEYS=/pst-[A-Za-z0-9_-]{20,}|sk-or-v1-[A-Za-z0-9]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AIza[0-9A-Za-z_-]{35}|ya29\.[0-9A-Za-z_-]{20,}|GOCSPX-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|hf_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}/;
+const saved=store.get("sklc.filter",{});
+const S={token:store.get("sklc.token",""),skills:[],sk:null,tree:[],head:"",form:null,job:null,v:{},q:"",open:false,scr:"launch",fam:saved.fam||"",place:saved.place||"on",stock:{},fmap:{},pending:[],ed:null,prompt:null};
+let presets=store.get("sklc.presets",{});
+function toast(t,err){const e=$("toast");e.textContent=t;e.classList.toggle("err",!!err);e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),err?4200:1700)}
+
+/* ---------------- GitHub ---------------- */
+async function gh(path,opt){
+  const r=await fetch(API+path,{...opt,headers:{Authorization:"Bearer "+S.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt&&opt.body?{"Content-Type":"application/json"}:{})},cache:"no-store"});
+  if(r.status===401)throw new Error("GitHub refused this token. Make a new one.");
+  if(r.status===403||r.status===429){const left=r.headers.get("x-ratelimit-remaining");throw new Error(left==="0"?"GitHub rate limit reached. Try again in a while.":"This token cannot do that. It needs Contents: read and write on manga-skills.")}
+  if(r.status===404)throw new Error("Not found on GitHub. Check that the token can see manga-skills.");
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){const e=new Error(d.message||("GitHub said "+r.status));e.status=r.status;throw e}
+  return d;}
+const R=`/repos/${OWNER}/${REPO}`;
+async function readHead(){const ref=await gh(`${R}/git/ref/heads/${BRANCH}`);const c=await gh(`${R}/git/commits/${ref.object.sha}`);return {sha:ref.object.sha,tree:c.tree.sha}}
+async function readText(sha){const b=await gh(`${R}/git/blobs/${sha}`);return (b.encoding==="base64"?b64d(b.content):b.content).split(String.fromCharCode(13)).join("")}   // git keeps LF; some files were committed with CRLF
+async function commit(entries,msg){   // one atomic commit; if GitHub moved on meanwhile, build it again on the new head
+  for(let tries=0;;tries++){
+    const h=await readHead();
+    const tree=await gh(`${R}/git/trees`,{method:"POST",body:JSON.stringify({base_tree:h.tree,tree:entries.map(e=>({path:e.path,mode:e.mode||"100644",type:"blob",...(e.del?{sha:null}:e.sha?{sha:e.sha}:{content:e.content})}))})});
+    const c=await gh(`${R}/git/commits`,{method:"POST",body:JSON.stringify({message:msg,tree:tree.sha,parents:[h.sha]})});
+    try{await gh(`${R}/git/refs/heads/${BRANCH}`,{method:"PATCH",body:JSON.stringify({sha:c.sha})});return c.sha}
+    catch(e){if(e.status===422&&tries<2)continue;throw e}
+  }}
+
+/* ---------------- SKILL.md ---------------- */
+const FM=/^---\s*\n([\s\S]*?)\n---\s*\n?/;
+function parseFm(fm){const out={},L=fm.split("\n");for(let i=0;i<L.length;){const m=L[i].match(/^([A-Za-z0-9_-]+):\s*(.*)$/);if(!m){i++;continue}
+  let v=m[2].trim();if([">",">-","|","|-",">+","|+"].includes(v)){const blk=[];i++;while(i<L.length&&(/^[ \t]/.test(L[i])||!L[i].trim())){blk.push(L[i].trim());i++}out[m[1]]=blk.filter(Boolean).join(v[0]===">"?" ":"\n").trim();continue}
+  if(v.length>=2&&v[0]===v[v.length-1]&&`"'`.includes(v[0]))v=v[0]==='"'?v.slice(1,-1).replace(/\\"/g,'"').replace(/\\\\/g,"\\"):v.slice(1,-1).replace(/''/g,"'");out[m[1]]=v;i++}return out}
+function fmSet(text,key,value){const m=text.match(FM);if(!m)return value==null?text:`---\n${key}: ${value}\n---\n`+text;const L=m[1].split("\n"),out=[];let done=false;
+  for(let i=0;i<L.length;){const k=L[i].match(/^([A-Za-z0-9_-]+):\s*(.*)$/);if(k&&k[1]===key){i++;if([">",">-","|","|-",">+","|+"].includes(k[2].trim()))while(i<L.length&&(/^[ \t]/.test(L[i])||!L[i].trim()))i++;if(value!=null&&!done){out.push(`${key}: ${value}`);done=true}continue}out.push(L[i]);i++}
+  if(value!=null&&!done)out.push(`${key}: ${value}`);return "---\n"+out.join("\n")+"\n---\n"+text.slice(m[0].length)}
+const yq=s=>'"'+s.replace(/\\/g,"\\\\").replace(/"/g,'\\"')+'"';
+const QUOTE=/['\u2018\u201c"]([^'"\u2018\u2019\u201c\u201d\n]{2,60})['\u2019\u201d"]/g;
+function splitDesc(desc){desc=desc||"";let nots=[];const nm=desc.match(/\s*Not for:\s*([^\n]*?)(?:\.(?=\s|$)|$)/i);if(nm){nots=nm[1].split(",").map(x=>x.replace(/^[\s'"]+|[\s'"]+$/g,"")).filter(Boolean);desc=desc.replace(nm[0],"")}
+  const TR=/\s*Trigger on\b[^\n]*?(?:\.(?=\s|$)|$)/gi;let trig=[];(desc.match(TR)||[]).forEach(s=>{for(const q of s.matchAll(QUOTE))trig.push(q[1])});const body=desc.replace(TR,"").trim();
+  if(!trig.length)for(const q of body.matchAll(QUOTE))if(!/^(http|E:|C:)/.test(q[1].trim()))trig.push(q[1]);
+  const seen=new Set();trig=trig.map(t=>t.trim()).filter(t=>t&&!seen.has(t.toLowerCase())&&seen.add(t.toLowerCase()));return {body,trig,nots}}
+function joinDesc(b,t,n){let s=b.trim();if(t.length)s+=(s?" ":"")+"Trigger on "+t.map(x=>"'"+x.replace(/'/g,"")+"'").join(", ")+".";if(n.length)s+=" Not for: "+n.map(x=>x.replace(/,/g," ")).join(", ")+".";return s}
+function familyOf(n){if(S.fmap[n])return S.fmap[n];const l=n.toLowerCase();return (FAMILIES.find(f=>f[4].test(l))||FAMILIES[9])[0]}
+const fam=id=>FAMILIES.find(f=>f[0]===id)||FAMILIES[9];
+function iconOf(n){for(const k in ICONS)if(n.includes(k))return ICONS[k];return "ti-sparkles"}
+
+/* ---------------- load ---------------- */
+async function loadAll(){
+  $("grid").innerHTML='<div class="empty" style="grid-column:1/-1" id="loading">Reading your skills…</div>';
+  const h=await readHead();S.head=h.sha;
+  const t=await gh(`${R}/git/trees/${h.tree}?recursive=1`);if(t.truncated)throw new Error("The repo is too large for one read.");
+  S.tree=t.tree.filter(x=>x.type==="blob");
+  const find=p=>S.tree.find(x=>x.path===p);
+  const jsonAt=async p=>{const e=find(p);if(!e)return null;try{return JSON.parse(await readText(e.sha))}catch(err){return null}};
+  [S.stock,S.fmap,S.pending]=await Promise.all([jsonAt(CD+"/stock.json"),jsonAt(CD+"/families.json"),jsonAt(CD+"/pending.json")]);
+  S.stock=S.stock||{};S.fmap=S.fmap||{};S.pending=S.pending||[];
+  const mds=S.tree.filter(x=>/^(skills|library)\/[^/]+\/SKILL\.md$/.test(x.path));
+  const cache=store.get("sklc.meta2",{}),meta={};let done=0;
+  const work=mds.slice();
+  await Promise.all(Array.from({length:8},async()=>{while(work.length){const e=work.pop();
+    let m=cache[e.sha];
+    if(!m){const text=await readText(e.sha);const f=parseFm((text.match(FM)||[])[1]||"");m={d:f.description||"",man:String(f["disable-model-invocation"]||"").toLowerCase()==="true"}}
+    meta[e.sha]=m;done++;const l=$("loading");if(l)l.textContent=`Reading your skills… ${done} of ${mds.length}`;}}));
+  store.set("sklc.meta2",meta);
+  S.skills=mds.map(e=>{const [area,name]=e.path.split("/"),m=meta[e.sha],sp=splitDesc(m.d),f=familyOf(name);const mode=area==="library"?"library":m.man?"manual":"auto";
+    return {name,area,path:e.path,sha:e.sha,desc:m.d,body:sp.body,triggers:sp.trig,not_for:sp.nots,mode,family:f,color:fam(f)[3],icon:iconOf(name),launcher:!!find(`${area}/${name}/launcher.json`),tokens:mode==="auto"?Math.round((name.length+1+m.d.length)/4):0}});
+  const rank=s=>(s.launcher?0:2)+(s.mode==="library"?4:0);S.skills.sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name));
+  S.sk=(S.sk&&S.skills.find(x=>x.name===S.sk.name))||S.skills.find(s=>s.mode!=="library"&&s.launcher)||S.skills[0]||null;
+  S.form=null;S.ed=null;nav();grid();info();
+  if(S.sk){if(S.scr==="launch")await loadForm();if(S.scr==="trig")trig()}
+}
+
+/* ---------------- nav + grid ---------------- */
+const NAV=[["launch","ti-player-play","Launch"],["trig","ti-target-arrow","Triggers"],["info","ti-info-circle","Status"]];
+function nav(){const p=S.pending.length;const h=NAV.map(([k,i,l])=>`<button class="${S.scr===k?"on":""}" data-s="${k}"><i class="ti ${i}"></i><span>${l}${k==="info"&&p?`<span class="badge">${p}</span>`:""}</span></button>`).join("");
+  $("navPhone").innerHTML=h;$("navDesk").innerHTML=h;document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.s));
+  const tot=S.skills.reduce((a,s)=>a+s.tokens,0);$("tokTop").innerHTML=`<span style="color:var(--y)">${(tot/1000).toFixed(1)}k</span> tokens / session`}
+function go(k){S.scr=k;document.querySelectorAll(".scr").forEach(e=>e.classList.toggle("on",e.id==="s-"+k));nav();window.scrollTo({top:0});if(k==="trig")trig();if(k==="launch"&&S.sk&&!S.form)loadForm();if(k==="info")info()}
+function fires(q){const hits=[];for(const s of S.skills){if(s.mode==="library")continue;if(s.not_for.some(n=>n&&q.includes(n.toLowerCase())))continue;
+  if(s.mode==="manual"){if(q.includes("/"+s.name))hits.push([s,"/"+s.name]);continue}const p=s.triggers.find(t=>q.includes(t.toLowerCase().replace(/^\//,"")));if(p)hits.push([s,p])}return hits}
+const WIDE=matchMedia("(min-width:900px)");WIDE.addEventListener("change",()=>grid());
+function setFilter(f,p){S.fam=f;S.place=p;store.set("sklc.filter",{fam:f,place:p});grid()}
+function grid(){const q=S.q.toLowerCase().trim(),hit=q?fires(q):[],hs=hit.map(h=>h[0]);
+  const inPlace=s=>S.place==="all"||(S.place==="library")===(s.mode==="library");
+  const list=q?S.skills.filter(s=>s.name.includes(q)||hs.includes(s)||fam(s.family)[1].toLowerCase().includes(q)):S.skills.filter(s=>inPlace(s)&&(!S.fam||s.family===S.fam));
+  const tile=s=>`<button class="t${hs.includes(s)?(hs.length>1?" clash":" hit"):""}${S.sk&&s.name===S.sk.name&&!q?" hit":""}${s.mode==="library"?" dim":""}" data-n="${esc(s.name)}" style="--c:${s.color}"><i class="ti ${s.icon} ic"></i><div class="nm">${esc(s.name)}</div><span class="md">${s.mode}</span></button>`;
+  let html;if(WIDE.matches&&!q&&!S.fam)html=FAMILIES.map(f=>{const it=list.filter(s=>s.family===f[0]);return it.length?`<div class="gh" style="color:${f[3]}"><span>${f[2]}</span><span>${esc(f[1])}</span><span class="c">${it.length}</span></div>`+it.map(tile).join(""):""}).join("");else html=list.map(tile).join("");
+  $("grid").innerHTML=html||`<div class="empty" style="grid-column:1/-1">${q?"No skill matches.":"No skill here. Try All skills."}</div>`;
+  const sq=S.skills.filter(inPlace),nOn=S.skills.filter(s=>s.mode!=="library").length;
+  $("catbar").style.display=q?"none":"";
+  $("places").innerHTML=[["on","Loaded",nOn],["library","Library",S.skills.length-nOn],["all","All skills",S.skills.length]].map(([k,l,n])=>`<option value="${k}"${S.place===k?" selected":""}>${l} (${n})</option>`).join("");
+  $("cats").innerHTML=`<option value="">All categories (${sq.length})</option>`+FAMILIES.map(f=>{const n=sq.filter(s=>s.family===f[0]).length;return n||S.fam===f[0]?`<option value="${f[0]}"${S.fam===f[0]?" selected":""}>${f[2]} ${esc(f[1])} (${n})</option>`:""}).join("");
+  const r=$("qres");if(!q){r.textContent="";r.style.color=""}else if(!hit.length){r.textContent="No skill fires. Claude reads none.";r.style.color=""}else if(hit.length===1){r.textContent=`Fires 1: ${hit[0][0].name} (“${hit[0][1]}”)`;r.style.color=hit[0][0].color}else{r.textContent=`Clash: ${hs.map(s=>s.name).join(" + ")}. Add a not-for phrase.`;r.style.color="#B79CFF"}
+  document.querySelectorAll("#grid .t").forEach(t=>t.onclick=()=>pick(t.dataset.n))}
+$("places").onchange=e=>setFilter(S.fam,e.target.value);$("cats").onchange=e=>setFilter(e.target.value,S.place);
+let qT;$("q").oninput=e=>{S.q=e.target.value;clearTimeout(qT);qT=setTimeout(grid,80)};
+function pick(n){const s=S.skills.find(x=>x.name===n);if(!s)return;S.sk=s;S.ed=null;S.v={};S.job=null;S.form=null;S.q="";$("q").value="";grid();if(S.scr==="trig")trig();else{if(S.scr==="info")go("launch");else loadForm()}}
+
+/* ---------------- launch ---------------- */
+async function loadForm(){const s=S.sk;if(!s)return;$("s-launch").style.setProperty("--a",s.color);$("lname").textContent=s.name;
+  $("lform").innerHTML='<div class="empty" style="margin-top:8px">Loading form…</div>';let d=null;
+  try{const e=S.tree.find(x=>x.path===`${s.area}/${s.name}/launcher.json`);if(e)d=JSON.parse(await readText(e.sha))}catch(err){$("lform").innerHTML=`<div class="warn">${esc(err.message)}</div>`;return}
+  if(S.sk!==s)return;
+  const fallback=!d;d=d||{jobs:[{id:"ask",name:"Ask",fields:[{id:"Task",type:"text",placeholder:"what you want done"}],tail:""}]};
+  d.jobs.forEach(j=>(j.fields||[]).forEach(f=>{const src=f.source||{cast:"profiles",style:"styles"}[f.type];
+    if(src)f.options=(f.type==="style"&&f.own?[{value:f.own,label:f.own}]:[]).concat(S.stock[src]||[]);else if(Array.isArray(f.options))f.options=f.options.map(o=>typeof o==="object"?o:{value:o,label:o})}));
+  S.form={...d,fallback};$("lalias").textContent=d.alias||(fallback?"no form yet · plain text":"");
+  if(!S.job||!d.jobs.find(j=>j.id===S.job))S.job=d.jobs[0].id;defaults();launch()}
+const curJob=()=>S.form.jobs.find(j=>j.id===S.job);
+function defaults(){for(const f of curJob().fields||[])if(S.v[f.id]==null&&f.default!=null)S.v[f.id]=f.default}
+function launch(){const j=curJob();
+  $("ljobs").innerHTML=S.form.jobs.length>1?S.form.jobs.map(x=>`<button class="tag${x.id===S.job?" on":""}" data-j="${esc(x.id)}">${esc(x.name)}</button>`).join(""):"";
+  $("ljobs").querySelectorAll(".tag").forEach(b=>b.onclick=()=>{S.job=b.dataset.j;S.v={};defaults();launch()});
+  let h="";(j.fields||[]).forEach((f,i)=>{const v=S.v[f.id],lab=f.label||f.id,opts=f.options||[];let body;
+    if(f.type==="image")body=`<input class="tx" data-t="${esc(f.id)}" placeholder="library id like @lib_4821, or a link" value="${esc(v||"")}">`;
+    else if(f.type==="text"||!f.type)body=`<input class="tx" data-t="${esc(f.id)}" placeholder="${esc(f.placeholder||"")}" value="${esc(v||"")}">`;
+    else if(!opts.length)body=`<div class="mono" style="color:var(--dim)">List not in GitHub yet (a PC sync adds it). Type it:</div><input class="tx" data-t="${esc(f.id)}" value="${esc(v||"")}">`;
+    else{const many=f.type==="many",sel=many?(Array.isArray(v)?v:String(v||"").split(", ").filter(Boolean)):[v];
+      body=`<div class="sc">${opts.map((o,k)=>`<button class="o${sel.includes(o.value)?" on":""}" data-f="${esc(f.id)}" data-v="${esc(o.value)}" data-m="${many?1:""}" title="${esc(o.note||"")}">${f.type==="cast"?`<span class="dot" style="background:${CASTCOL[k%CASTCOL.length]}">${esc(o.label[0])}</span>`:""}${esc(o.label)}</button>`).join("")}</div>`}
+    h+=`<div class="row${v&&(!Array.isArray(v)||v.length)?" ok":""}"><div class="lb"><span class="n">${i+1}</span><span class="mono">${esc(lab.toLowerCase())}</span></div>${body}</div>`});
+  $("lform").innerHTML=h;
+  $("lform").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const f=b.dataset.f,o=b.dataset.v;if(b.dataset.m){let a=Array.isArray(S.v[f])?S.v[f].slice():String(S.v[f]||"").split(", ").filter(Boolean);a=a.includes(o)?a.filter(z=>z!==o):a.concat(o);S.v[f]=a}else S.v[f]=S.v[f]===o&&!curJob().fields.find(x=>x.id===f).default?null:o;launch()});
+  $("lform").querySelectorAll("[data-t]").forEach(b=>b.oninput=()=>{S.v[b.dataset.t]=b.value;b.closest(".row").classList.toggle("ok",!!b.value);prompt()});
+  const ps=presets[S.sk.name]||[];
+  $("presets").innerHTML=ps.length?ps.map((p,i)=>`<button class="tag" data-p="${i}" style="transform:none"><i class="ti ti-star"></i> ${esc(p.name)}</button><button class="tag" data-px="${i}" style="transform:none;padding:6px 7px" aria-label="Delete preset"><i class="ti ti-x"></i></button>`).join(""):'<span class="mono" style="color:var(--dim)">None yet. Fill the form and tap the star.</span>';
+  $("presets").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=ps[b.dataset.p];if(p.job)S.job=p.job;S.v={...p.v};launch();toast("Preset loaded")});
+  $("presets").querySelectorAll("[data-px]").forEach(b=>b.onclick=()=>{ps.splice(b.dataset.px,1);presets[S.sk.name]=ps;store.set("sklc.presets",presets);launch()});
+  prompt()}
+function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[];const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
+  for(const x of fields){const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
+    if(v==null||v===""){if(x.required!==undefined?x.required:!["text",undefined].includes(x.type)){missing.push(lab);lines.push(lab.padEnd(w)+"  ?")}continue}
+    v=String(v);if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=o&&o.path?o.path.split(/[\\/]/).pop():"";v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"")}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
+    lines.push(lab.padEnd(w)+"  "+v)}
+  let head=`Use the ${s.name} skill (read ${s.path} in github.com/${OWNER}/${REPO} first).`;if(!S.form.fallback){head+=` Job: ${j.name.toLowerCase()}.`;if(j.follow)head+=`\nFollow ${j.follow}.`}
+  let tail=j.tail||"";if(!S.form.fallback&&fields.some(x=>x.type!=="text"))tail=(tail?tail+" ":"")+"All inputs are answered: do not ask for them again.";
+  const text=head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
+  $("out").textContent=text;$("tk").textContent=Math.round(text.length/4)+" TK";const need=fields.filter(f=>f.required!==undefined?f.required:f.type&&f.type!=="text").length;$("lcount").textContent=need?`${need-missing.length}/${need}`:"";$("hint").textContent=""}
+$("bub").onclick=()=>{S.open=!S.open;$("bub").classList.toggle("open",S.open);$("chev").className="ti ti-chevron-"+(S.open?"up":"down")+" hidedesk"};
+$("go").onclick=async()=>{const p=S.prompt;if(!p)return;if(p.missing.length){$("hint").textContent="Fill "+p.missing.join(", ");$("hint").style.color="#FF7A6B";return}
+  const win=window.open("https://claude.ai/code","_blank","noopener");try{await navigator.clipboard.writeText(p.text);toast("Prompt copied. Paste it in Claude.")}catch(e){toast("Copy is blocked; tap the bubble and copy it by hand",true)}};
+$("save").onclick=()=>{const name=Object.values(S.v).filter(x=>x&&!Array.isArray(x)).slice(0,2).join(" · ")||"My preset";(presets[S.sk.name]=presets[S.sk.name]||[]).push({name,job:S.job,v:{...S.v}});store.set("sklc.presets",presets);launch();toast("Preset saved")};
+
+/* ---------------- triggers ---------------- */
+const MODES={auto:"Claude picks it by meaning from the description.",manual:"Only /name runs it. Costs 0 tokens.",library:"Stored in the library, never loaded."};
+function edInit(){const s=S.sk;S.ed={skill:s.name,trig:s.triggers.slice(),not:s.not_for.slice(),body:s.body}}
+function trig(){const s=S.sk;if(!s)return;if(!S.ed||S.ed.skill!==s.name)edInit();const e=S.ed;$("tname").textContent=s.name;$("s-trig").style.setProperty("--a",s.color);
+  $("tfam").innerHTML=FAMILIES.map(f=>`<option value="${f[0]}"${f[0]===s.family?" selected":""}>${f[2]} ${esc(f[1])}</option>`).join("");
+  $("tmode").innerHTML=Object.keys(MODES).map(m=>`<button class="${s.mode===m?"on":""}" data-m="${m}">${m[0].toUpperCase()+m.slice(1)}</button>`).join("");
+  $("tmode").querySelectorAll("button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));$("tmodehelp").textContent=MODES[s.mode];
+  $("ton").innerHTML=e.trig.map((p,i)=>`<span class="chip">${esc(p)}<button data-rm="${i}" aria-label="Remove"><i class="ti ti-x"></i></button></span>`).join("")||'<span class="mono" style="color:var(--dim)">No phrases yet.</span>';
+  $("ton").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{e.trig.splice(b.dataset.rm,1);trig()});
+  $("tnot").innerHTML=e.not.map((p,i)=>`<span class="chip not">${esc(p)}<button data-nrm="${i}" aria-label="Remove"><i class="ti ti-x"></i></button></span>`).join("")||'<span class="mono" style="color:var(--dim)">none</span>';
+  $("tnot").querySelectorAll("[data-nrm]").forEach(b=>b.onclick=()=>{e.not.splice(b.dataset.nrm,1);trig()});
+  if(document.activeElement!==$("tbody"))$("tbody").value=e.body;
+  const d=s.mode==="manual"?`(hidden from Claude: /${s.name} only)`:s.mode==="library"?"(not loaded)":joinDesc(e.body,e.trig,e.not);$("tdesc").textContent=d;$("ttk").textContent=(s.mode==="auto"?Math.round((s.name.length+d.length+1)/4):0)+" TK"}
+$("tbody").oninput=()=>{if(S.ed){S.ed.body=$("tbody").value;trig()}};
+function addPhrase(id,k){const v=$(id).value.trim();if(!v||!S.ed)return;if(!S.ed[k].includes(v))S.ed[k].push(v);$(id).value="";trig()}
+$("taddb").onclick=()=>addPhrase("tadd","trig");$("tnaddb").onclick=()=>addPhrase("tnadd","not");$("tadd").onkeydown=e=>{if(e.key==="Enter")addPhrase("tadd","trig")};$("tnadd").onkeydown=e=>{if(e.key==="Enter")addPhrase("tnadd","not")};
+async function busy(btn,fn){if(btn)btn.setAttribute("aria-busy","true");try{await fn()}catch(e){toast(e.message,true)}finally{if(btn)btn.removeAttribute("aria-busy")}}
+async function freshText(s){const h=await readHead(),t=await gh(`${R}/git/trees/${h.tree}?recursive=1`);S.tree=t.tree.filter(x=>x.type==="blob");const e=S.tree.find(x=>x.path===s.path);if(!e)throw new Error(s.name+" is no longer in GitHub. Reload.");return readText(e.sha)}
+$("tsave").onclick=()=>busy($("tsave"),async()=>{const e=S.ed,s=S.sk;if(!e)return;const d=joinDesc(e.body,e.trig,e.not);if(d.length>1024)throw new Error(`Description is ${d.length} characters; the limit is 1024.`);if(KEYS.test(d))throw new Error("That text has a key in it. Remove it first.");
+  const text=await freshText(s);await commit([{path:s.path,content:fmSet(text,"description",yq(d))}],`Triggers of ${s.name} (cloud)`);toast("Saved to GitHub");await loadAll()});
+async function setMode(m){const s=S.sk;if(m===s.mode)return;await busy(null,async()=>{
+  if(m==="library"||s.area==="library"){await moveTo(s,m==="library"?"library":"skills",m==="manual")}else{const text=await freshText(s);await commit([{path:s.path,content:fmSet(text,"disable-model-invocation",m==="manual"?"true":null)}],`${s.name}: ${m} (cloud)`)}
+  toast(`${s.name}: ${m}`);await loadAll()})}
+async function moveTo(s,to,manual){const pre=`${s.area}/${s.name}/`,files=S.tree.filter(x=>x.path.startsWith(pre));const es=[];
+  for(const f of files){es.push({path:f.path,del:true});if(!(manual&&f.path===s.path))es.push({path:`${to}/${s.name}/`+f.path.slice(pre.length),sha:f.sha,mode:f.mode})}
+  if(manual)es.push({path:`${to}/${s.name}/SKILL.md`,content:fmSet(await readText(s.sha),"disable-model-invocation","true")});
+  es.push({path:CD+"/pending.json",content:JSON.stringify(S.pending.filter(p=>p.skill!==s.name).concat({op:"move",skill:s.name,to,at:new Date().toISOString()}),null,1)+"\n"});
+  await commit(es,`Move ${s.name} to ${to}/ (cloud)`)}
+$("tfam").onchange=e=>busy(null,async()=>{const s=S.sk,m={...S.fmap,[s.name]:e.target.value};await commit([{path:CD+"/families.json",content:JSON.stringify(m,null,1)+"\n"}],`Category of ${s.name} (cloud)`);toast("Category saved");await loadAll()});
+document.querySelectorAll("[data-trash]").forEach(b=>b.onclick=()=>{const s=S.sk;if(!s||!confirm(`Remove ${s.name}?\n\nIt is removed from GitHub now (its history stays). The next PC sync sends the PC copy to the Recycle Bin.`))return;
+  busy(null,async()=>{const pre=`${s.area}/${s.name}/`,es=S.tree.filter(x=>x.path.startsWith(pre)).map(f=>({path:f.path,del:true}));
+    es.push({path:CD+"/pending.json",content:JSON.stringify(S.pending.filter(p=>p.skill!==s.name).concat({op:"trash",skill:s.name,at:new Date().toISOString()}),null,1)+"\n"});
+    await commit(es,`Trash skill ${s.name} (cloud)`);S.sk=null;S.v={};S.job=null;toast(s.name+" removed from GitHub");await loadAll()})});
+
+/* ---------------- status ---------------- */
+function info(){$("ipend").innerHTML=S.pending.length?`<div class="warn"><b>Waiting for the PC (${S.pending.length}):</b> the next PC sync applies these.<br>${S.pending.map(p=>`${esc(p.op)} ${esc(p.skill)}${p.to?" to "+esc(p.to):""}`).join("<br>")}</div>`:'<div class="note">Nothing waiting for the PC.</div>';
+  const lib=S.skills.filter(s=>s.area==="library").length;$("ilog").textContent=`repo     ${OWNER}/${REPO}\nbranch   ${BRANCH} @ ${(S.head||"").slice(0,7)}\nskills   ${S.skills.length - lib} loaded, ${lib} in the library\nlists    ${Object.keys(S.stock).length ? Object.keys(S.stock).join(", ") : "none yet (a PC sync adds them)"}`}
+$("reload").onclick=()=>busy($("reload"),async()=>{await loadAll();toast("Up to date")});
+$("logout").onclick=()=>{if(!confirm("Forget the token in this browser?"))return;store.set("sklc.token","");try{localStorage.removeItem("sklc.token")}catch(e){}location.reload()};
+
+/* ---------------- start ---------------- */
+function showLogin(msg){$("login").hidden=false;$("main").hidden=true;$("navPhone").hidden=true;if(msg){$("loginErr").hidden=false;$("loginErr").textContent=msg}}
+async function start(){$("login").hidden=true;$("main").hidden=false;$("navPhone").hidden=false;$("navPhone").classList.add("hidedesk");nav();
+  try{await loadAll()}catch(e){if(/token|Not found/i.test(e.message))showLogin(e.message);else{$("grid").innerHTML=`<div class="warn" style="grid-column:1/-1">${esc(e.message)}</div>`}}}
+$("loginGo").onclick=()=>{const t=$("tok").value.trim();if(!t){showLogin("Paste your token first.");return}S.token=t;store.set("sklc.token",t);$("tok").value="";$("loginErr").hidden=true;start()};
+$("tok").onkeydown=e=>{if(e.key==="Enter")$("loginGo").click()};
+if(S.token)start();else showLogin();
+</script>
+</body>
+</html>
