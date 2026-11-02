@@ -350,6 +350,9 @@ textarea.tx{min-height:64px;padding:5px 8px}
   .t .ic{font-size:18px}
   .t .nm{font-size:15px}
 }
+
+#catbar{grid-template-columns:minmax(0,.85fr) minmax(0,1.2fr) minmax(0,.75fr)}
+#catbar option,#sortby option{background:#2B2737;color:#FFF8EE}
 </style>
 </head>
 <body>
@@ -378,6 +381,7 @@ textarea.tx{min-height:64px;padding:5px 8px}
       <div id="catbar">
         <select class="tx" id="places" aria-label="Show which skills"></select>
         <select class="tx" id="cats" aria-label="Category"></select>
+        <select class="tx" id="sortby" aria-label="Sort"><option value="name">A-Z</option><option value="date">Newest</option></select>
       </div>
       <div class="grid" id="grid"><div class="empty" style="grid-column:1/-1" id="loading">Reading your skills…</div></div>
     </aside>
@@ -511,6 +515,7 @@ async function loadAll(){
   const h=await readHead();S.head=h.sha;
   const t=await gh(`${R}/git/trees/${h.tree}?recursive=1`);if(t.truncated)throw new Error("The repo is too large for one read.");
   S.tree=t.tree.filter(x=>x.type==="blob");
+  S.folders=Object.fromEntries(t.tree.filter(x=>x.type==="tree").map(x=>[x.path,x.sha]));
   const find=p=>S.tree.find(x=>x.path===p);
   const jsonAt=async p=>{const e=find(p);if(!e)return null;try{return JSON.parse(await readText(e.sha))}catch(err){return null}};
   [S.stock,S.fmap,S.pending]=await Promise.all([jsonAt(CD+"/stock.json"),jsonAt(CD+"/families.json"),jsonAt(CD+"/pending.json")]);
@@ -527,7 +532,7 @@ async function loadAll(){
     return {name,area,path:e.path,sha:e.sha,desc:m.d,body:sp.body,triggers:sp.trig,not_for:sp.nots,mode,family:f,color:fam(f)[3],icon:iconOf(name),launcher:!!find(`${area}/${name}/launcher.json`),tokens:mode==="auto"?Math.round((name.length+1+m.d.length)/4):0}});
   const rank=s=>(s.launcher?0:2)+(s.mode==="library"?4:0);S.skills.sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name));
   S.sk=(S.sk&&S.skills.find(x=>x.name===S.sk.name))||S.skills.find(s=>s.mode!=="library"&&s.launcher)||S.skills[0]||null;
-  S.form=null;S.ed=null;nav();grid();info();
+  S.form=null;S.ed=null;if(S.sort==="date")loadDates();nav();grid();info();
   if(S.sk){if(S.scr==="launch")await loadForm();if(S.scr==="trig")trig()}
 }
 
@@ -539,13 +544,18 @@ function nav(){const p=S.pending.length;const h=NAV.map(([k,i,l])=>`<button clas
 function go(k){S.scr=k;document.querySelectorAll(".scr").forEach(e=>e.classList.toggle("on",e.id==="s-"+k));nav();window.scrollTo({top:0});if(k==="trig")trig();if(k==="launch"&&S.sk&&!S.form)loadForm();if(k==="info")info()}
 function fires(q){const hits=[];for(const s of S.skills){if(s.mode==="library")continue;if(s.not_for.some(n=>n&&q.includes(n.toLowerCase())))continue;
   if(s.mode==="manual"){if(q.includes("/"+s.name))hits.push([s,"/"+s.name]);continue}const p=s.triggers.find(t=>q.includes(t.toLowerCase().replace(/^\//,"")));if(p)hits.push([s,p])}return hits}
+try{S.sort=localStorage.getItem("sklc.sort")||"name"}catch(e){S.sort="name"}
+$("sortby").value=S.sort;
+const fmtDate=t=>t?new Date(t*1000).toISOString().slice(2,10):"";
+$("sortby").onchange=e=>{S.sort=e.target.value;try{localStorage.setItem("sklc.sort",S.sort)}catch(err){}if(S.sort==="date")loadDates();grid()};
 const WIDE=matchMedia("(min-width:900px)");WIDE.addEventListener("change",()=>grid());
 function setFilter(f,p){S.fam=f;S.place=p;store.set("sklc.filter",{fam:f,place:p});grid()}
 function grid(){const q=S.q.toLowerCase().trim(),hit=q?fires(q):[],hs=hit.map(h=>h[0]);
   const inPlace=s=>S.place==="all"||(S.place==="library")===(s.mode==="library");
   const list=q?S.skills.filter(s=>s.name.includes(q)||hs.includes(s)||fam(s.family)[1].toLowerCase().includes(q)):S.skills.filter(s=>inPlace(s)&&(!S.fam||s.family===S.fam));
-  const tile=s=>`<button class="t${hs.includes(s)?(hs.length>1?" clash":" hit"):""}${S.sk&&s.name===S.sk.name&&!q?" hit":""}${s.mode==="library"?" dim":""}" data-n="${esc(s.name)}" style="--c:${s.color}"><i class="ti ${s.icon} ic"></i><div class="nm">${esc(s.name)}</div>${s.mode==="auto"||s.mode==="library"?"":`<span class="md">${s.mode}</span>`}</button>`;
-  let html;if(WIDE.matches&&!q&&!S.fam)html=FAMILIES.map(f=>{const it=list.filter(s=>s.family===f[0]);return it.length?`<div class="gh" style="color:${f[3]}"><span>${f[2]}</span><span>${esc(f[1])}</span><span class="c">${it.length}</span></div>`+it.map(tile).join(""):""}).join("");else html=list.map(tile).join("");
+  const tile=s=>`<button class="t${hs.includes(s)?(hs.length>1?" clash":" hit"):""}${S.sk&&s.name===S.sk.name&&!q?" hit":""}${s.mode==="library"?" dim":""}" data-n="${esc(s.name)}" style="--c:${s.color}"><i class="ti ${s.icon} ic"></i><div class="nm">${esc(s.name)}</div>${S.sort==="date"?`<span class="md">${fmtDate(s.modified)}</span>`:s.mode==="auto"||s.mode==="library"?"":`<span class="md">${s.mode}</span>`}</button>`;
+  let html;if(S.sort==="date")list.sort((a,b)=>(b.modified||0)-(a.modified||0)||a.name.localeCompare(b.name));
+  if(WIDE.matches&&!q&&!S.fam&&S.sort!=="date")html=FAMILIES.map(f=>{const it=list.filter(s=>s.family===f[0]);return it.length?`<div class="gh" style="color:${f[3]}"><span>${f[2]}</span><span>${esc(f[1])}</span><span class="c">${it.length}</span></div>`+it.map(tile).join(""):""}).join("");else html=list.map(tile).join("");
   const gst=$("grid").scrollTop;$("grid").innerHTML=html||`<div class="empty" style="grid-column:1/-1">${q?"No skill matches.":"No skill here. Try All skills."}</div>`;
   $("grid").scrollTop=gst;const sq=S.skills.filter(inPlace),nOn=S.skills.filter(s=>s.mode!=="library").length;
   $("catbar").style.display=q?"none":"";
@@ -640,6 +650,15 @@ function info(){$("ipend").innerHTML=S.pending.length?`<div class="warn"><b>Wait
   const lib=S.skills.filter(s=>s.area==="library").length;$("ilog").textContent=`repo     ${OWNER}/${REPO}\nbranch   ${BRANCH} @ ${(S.head||"").slice(0,7)}\nskills   ${S.skills.length - lib} loaded, ${lib} in the library\nlists    ${Object.keys(S.stock).length ? Object.keys(S.stock).join(", ") : "none yet (a PC sync adds them)"}`}
 $("reload").onclick=()=>busy($("reload"),async()=>{await loadAll();toast("Up to date")});
 $("logout").onclick=()=>{if(!confirm("Forget the token in this browser?"))return;store.set("sklc.token","");try{localStorage.removeItem("sklc.token")}catch(e){}location.reload()};
+
+/* GitHub has no file dates in a tree: ask for each skill's last commit, cached by the folder's hash */
+async function loadDates(){const cache=store.get("sklc.dates",{}),todo=[];
+  for(const s of S.skills){const k=S.folders[`${s.area}/${s.name}`];if(cache[k])s.modified=cache[k];else todo.push([s,k])}
+  grid();let n=0;
+  await Promise.all(Array.from({length:8},async()=>{while(todo.length){const [s,k]=todo.pop();
+    try{const c=await gh(`${R}/commits?sha=${BRANCH}&per_page=1&path=${encodeURIComponent(s.area+"/"+s.name)}`);if(c[0]){s.modified=Math.round(Date.parse(c[0].commit.committer.date)/1000);cache[k]=s.modified}}catch(e){toast(e.message,true);todo.length=0}
+    if(++n%20===0)grid()}}));
+  store.set("sklc.dates",cache);grid()}
 
 /* ---------------- start ---------------- */
 function showLogin(msg){$("login").hidden=false;$("main").hidden=true;$("navPhone").hidden=true;if(msg){$("loginErr").hidden=false;$("loginErr").textContent=msg}}
