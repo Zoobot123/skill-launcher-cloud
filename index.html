@@ -106,6 +106,104 @@ textarea.tx{height:auto;min-height:90px;padding:8px 12px;resize:vertical;line-he
   #actbar{position:sticky;bottom:60px;background:var(--ink);padding:2px 0 6px;z-index:3}
   #actbar .bub{margin-top:6px}
   #tbar{position:sticky;bottom:60px;background:var(--ink);padding:6px 0;z-index:3}}
+
+/* compact layout (user 2026-11-02: "mobile too big to view, and pc also too big") */
+html,body{font-size:13px;line-height:1.35}
+.app{padding:6px 8px 44px}
+.top{margin-bottom:5px;gap:6px}
+.top>.h{font-size:15px!important}
+.mono{font-size:12px}
+.tx{height:30px;padding:0 8px;font-size:13px;border-width:1px}
+textarea.tx{min-height:64px;padding:5px 8px}
+.ib{width:28px;height:28px;font-size:14px;border-width:1px}
+.ib.big{width:34px;height:34px;font-size:15px}
+.go{height:34px;font-size:14px;border-width:1px;box-shadow:2px 2px 0 var(--pa)}
+.tag{font-size:12px;padding:2px 8px;border-width:1px}
+.sc{gap:4px;padding:1px}
+.o{min-height:26px!important;font-size:12px;padding:0 8px;gap:4px;border-width:1px}
+.dot{width:16px;height:16px;font-size:9px;border-width:1px}
+.row{padding:3px 6px!important;margin-top:3px!important;border-width:1px}
+.row.fr{display:grid;grid-template-columns:58px minmax(0,1fr);gap:4px;align-items:center}
+.row.fr .lb{margin:0;gap:4px;min-width:0}
+.row.fr .lb .mono{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.fr .fb{min-width:0}
+.row.fr .fb .tx{height:26px}
+.row.fr .fb .sc+.tx{margin-top:2px!important}
+.row:not(.fr) .lb{margin-bottom:3px}
+.n{font-size:11px}
+.bub{border-radius:10px;padding:4px 8px;margin-top:4px}
+.bub pre{font-size:11px;line-height:1.35;margin-top:1px;max-height:15px}
+.bub .h{font-size:10px!important}
+#catbar{gap:4px;margin-bottom:4px;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr)}
+#catbar select{font-size:12px;padding:0 4px;height:28px}
+#qres{margin:2px 0!important;font-size:11px}
+#q{height:28px}
+.t{display:flex;align-items:center;gap:5px;min-height:0!important;padding:2px 6px!important;border-width:1px;border-top-width:1px;border-left:3px solid var(--c)}
+.t .ic{font-size:14px;flex:none}
+.t .nm{margin:0;padding:0;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.t .md{position:static;font-size:10px;flex:none;color:var(--dim)}
+.t .sd{position:static;order:3;width:7px;height:7px;border:0;flex:none}
+.gh{font-size:11px;margin-top:5px;padding-bottom:1px;border-bottom-width:1px;gap:4px}
+.gh .c{font-size:10px}
+.seg{border-width:1px}
+.seg button{padding:4px 0;font-size:12px}
+.chip{font-size:12px;padding:2px 6px;border-width:1px;margin:0 3px 3px 0;gap:4px}
+.chip button{font-size:12px}
+.nav button{font-size:11px}
+.nav button i{font-size:15px}
+.toast{font-size:12px;padding:5px 10px;bottom:48px}
+.warn,.note{font-size:12px;padding:4px 8px;margin-top:4px;border-width:1px}
+.log{font-size:11px;padding:5px 8px;margin-top:4px;line-height:1.4;border-width:1px;max-height:110px;overflow:auto}
+.card{padding:3px 6px;border-width:1px}
+.srow{padding:3px 8px;margin-top:3px;border-width:1px;gap:6px}
+.srow .nm{font-size:12px}
+.srow .act{font-size:11px;margin-top:0}
+.pill{font-size:10px;padding:0 5px}
+#hint{min-height:0!important;margin-top:2px!important;font-size:11px}
+#presets .tag{font-size:11px}
+#lname,#tname+*{font-size:14px}
+#lname{font-size:14px!important}
+#s-launch>div:first-child,#s-trig>div:first-child,#s-sync>div:first-child,#s-info>.h{margin-top:3px!important;gap:5px!important}
+#s-trig .h,#s-sync .h,#s-info .h{font-size:14px!important}
+#ljobs{margin-top:2px!important}
+#scount .h{font-size:14px!important}
+#scount .mono{font-size:10px!important}
+#scount{margin-top:3px!important;gap:3px!important}
+#s-sync>div[style*="display:flex"]{margin-top:4px!important}
+#s-trig .mono[style*="margin-top"]{margin-top:4px!important}
+#tmode,#tfam{margin-top:2px!important}
+#tfam{height:28px}
+#tbar{margin-top:4px!important}
+.launchgrid>div>.mono{margin-top:4px!important}
+@media (min-width:900px){
+  .app{max-width:1500px;padding:6px 12px}
+  .top{margin-bottom:6px}
+  .nav button{padding:2px 8px;font-size:12px;border-width:1px}
+  .nav button i{font-size:13px}
+  .desk{grid-template-columns:236px minmax(0,1fr);gap:12px}
+  #side{top:6px;max-height:calc(100vh - 46px)}
+  .grid#grid{grid-template-columns:minmax(0,1fr);gap:2px}
+  #scount.grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .launchgrid{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px}
+  #actbar{top:6px}
+  .bub pre{max-height:none;font-size:12px;line-height:1.4}
+  .toast{bottom:14px}
+  #s-sync,#s-trig,#s-info{max-width:760px}
+}
+@media (max-width:899px){
+  .app{max-width:none}
+  #lalias{display:none}
+  #grid{gap:3px;padding-bottom:1px}
+  #grid .t{width:auto;max-width:170px}
+  #grid .t .md{display:none}
+  .row{padding:3px 6px!important;margin-top:3px!important}
+  #actbar{bottom:34px;padding:1px 0 3px}
+  #actbar .bub{margin-top:3px}
+  #actbar>div[style*="display:flex"]{margin-top:4px!important}
+  #tbar{bottom:34px;padding:3px 0}
+  .nav button{flex-direction:row;justify-content:center;gap:4px;padding:6px 0 7px}
+  .app{padding-bottom:40px}
+}
 </style>
 </head>
 <body>
@@ -153,7 +251,7 @@ textarea.tx{height:auto;min-height:90px;padding:8px 12px;resize:vertical;line-he
               <pre id="out"></pre>
             </div>
             <div style="display:flex;gap:8px;margin-top:10px">
-              <button class="go" id="go" title="Copies the prompt and opens Claude on the web">COPY + OPEN CLAUDE</button>
+              <button class="go" id="go" title="Copies the prompt and opens Claude on the web">COPY + CLAUDE</button>
               <button class="ib big" id="save" aria-label="Save preset" title="Save preset"><i class="ti ti-star"></i></button>
             </div>
             <div class="mono" id="hint" style="text-align:center;margin-top:4px;min-height:18px"></div>
@@ -291,7 +389,7 @@ async function loadAll(){
 const NAV=[["launch","ti-player-play","Launch"],["trig","ti-target-arrow","Triggers"],["info","ti-info-circle","Status"]];
 function nav(){const p=S.pending.length;const h=NAV.map(([k,i,l])=>`<button class="${S.scr===k?"on":""}" data-s="${k}"><i class="ti ${i}"></i><span>${l}${k==="info"&&p?`<span class="badge">${p}</span>`:""}</span></button>`).join("");
   $("navPhone").innerHTML=h;$("navDesk").innerHTML=h;document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.s));
-  const tot=S.skills.reduce((a,s)=>a+s.tokens,0);$("tokTop").innerHTML=`<span style="color:var(--y)">${(tot/1000).toFixed(1)}k</span> tokens / session`}
+  const tot=S.skills.reduce((a,s)=>a+s.tokens,0);$("tokTop").innerHTML=`<span style="color:var(--y)">${(tot/1000).toFixed(1)}k</span> tk`}
 function go(k){S.scr=k;document.querySelectorAll(".scr").forEach(e=>e.classList.toggle("on",e.id==="s-"+k));nav();window.scrollTo({top:0});if(k==="trig")trig();if(k==="launch"&&S.sk&&!S.form)loadForm();if(k==="info")info()}
 function fires(q){const hits=[];for(const s of S.skills){if(s.mode==="library")continue;if(s.not_for.some(n=>n&&q.includes(n.toLowerCase())))continue;
   if(s.mode==="manual"){if(q.includes("/"+s.name))hits.push([s,"/"+s.name]);continue}const p=s.triggers.find(t=>q.includes(t.toLowerCase().replace(/^\//,"")));if(p)hits.push([s,p])}return hits}
@@ -334,7 +432,7 @@ function launch(){const j=curJob();
     else if(!opts.length)body=`<div class="mono" style="color:var(--dim)">List not in GitHub yet (a PC sync adds it). Type it:</div><input class="tx" data-t="${esc(f.id)}" value="${esc(v||"")}">`;
     else{const many=f.type==="many",sel=many?(Array.isArray(v)?v:String(v||"").split(", ").filter(Boolean)):[v];
       body=`<div class="sc">${opts.map((o,k)=>`<button class="o${sel.includes(o.value)?" on":""}" data-f="${esc(f.id)}" data-v="${esc(o.value)}" data-m="${many?1:""}" title="${esc(o.note||"")}">${f.type==="cast"?`<span class="dot" style="background:${CASTCOL[k%CASTCOL.length]}">${esc(o.label[0])}</span>`:""}${esc(o.label)}</button>`).join("")}</div>`}
-    h+=`<div class="row${v&&(!Array.isArray(v)||v.length)?" ok":""}"><div class="lb"><span class="n">${i+1}</span><span class="mono">${esc(lab.toLowerCase())}</span></div>${body}</div>`});
+    h+=`<div class="row fr${v&&(!Array.isArray(v)||v.length)?" ok":""}"><div class="lb"><span class="n">${i+1}</span><span class="mono" title="${esc(lab)}">${esc(lab.toLowerCase())}</span></div><div class="fb">${body}</div></div>`});
   $("lform").innerHTML=h;
   $("lform").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const f=b.dataset.f,o=b.dataset.v;if(b.dataset.m){let a=Array.isArray(S.v[f])?S.v[f].slice():String(S.v[f]||"").split(", ").filter(Boolean);a=a.includes(o)?a.filter(z=>z!==o):a.concat(o);S.v[f]=a}else S.v[f]=S.v[f]===o&&!curJob().fields.find(x=>x.id===f).default?null:o;launch()});
   $("lform").querySelectorAll("[data-t]").forEach(b=>b.oninput=()=>{S.v[b.dataset.t]=b.value;b.closest(".row").classList.toggle("ok",!!b.value);prompt()});
