@@ -6,6 +6,7 @@
 <title>Skill Launcher Cloud</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0a0b0f">
+<meta name="app-version" content="2026-11-03.4">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
@@ -942,6 +943,16 @@ document.addEventListener("keydown",e=>{const tag=(e.target.tagName||"").toLower
   if(e.key==="/"&&!typing&&S.view==="list"){e.preventDefault();$("q").focus()}
   else if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)&&S.view==="skill"&&S.tab==="launch"){e.preventDefault();copyPrompt()}
   else if(e.key==="Escape"){if(!$("pkov").hidden)closePicker();else if(!$("spop").hidden)$("spop").hidden=true;else if($("sheet").classList.contains("on"))sheet(false);else if(S.view==="skill"&&!typing)location.hash="#/"}});
+
+/* ---------------- fresh copy ----------------
+   GitHub Pages lets a browser keep this page for 10 minutes. Ask the server for the page (which also refreshes the
+   browser's copy) and reload once when its version differs from the one running. */
+async function freshCopy(){try{const mine=(document.querySelector('meta[name="app-version"]')||{}).content||"";
+  const r=await fetch(location.pathname+location.search,{cache:"reload"});if(!r.ok)return;
+  const m=(await r.text()).match(/<meta name="app-version" content="([^"]+)"/);if(!m||m[1]===mine)return;
+  const k="sklc.reloadedFor";let done="";try{done=sessionStorage.getItem(k)||""}catch(e){}if(done===m[1])return;
+  try{sessionStorage.setItem(k,m[1])}catch(e){}location.reload()}catch(e){}}
+freshCopy();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")freshCopy()});
 
 /* ---------------- start ---------------- */
 function showLogin(msg){$("login").hidden=false;$("app").hidden=true;if(msg){$("loginErr").hidden=false;$("loginErr").textContent=msg}}
