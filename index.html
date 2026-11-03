@@ -111,8 +111,19 @@ select.in option{background:var(--s2);color:var(--tx)}
 .bar{position:sticky;top:var(--top-h);z-index:12;margin:0 -22px;padding:12px 22px 10px;background:rgba(10,11,15,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr);gap:9px}
 .brow{display:flex;gap:8px;align-items:center}
 .brow .search{flex:1;min-width:0}
-.brow select{width:auto;flex:none}
+.brow select{width:auto;flex:none;height:38px;border-radius:11px}
 .bar .qres{min-height:0}
+.crow{display:flex;gap:8px;align-items:center;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);padding-right:30px}
+.crow::-webkit-scrollbar{display:none}
+.crow .cats{overflow:visible;-webkit-mask-image:none;mask-image:none;padding-right:0;flex:none}
+.seg.sm{flex:none;padding:2px;border-radius:999px}
+.seg.sm button{height:26px;padding:0 10px;border-radius:999px;font-size:12px}
+.vsep{width:1px;height:20px;background:var(--line2);flex:none}
+.bar{transition:padding .2s}
+.crow{transition:max-height .2s,opacity .2s;max-height:40px}
+html{overflow-anchor:none}
+body.scrolldown .crow{max-height:0;opacity:0;pointer-events:none}
+body.scrolldown .bar{gap:0}
 .topskill{display:flex;gap:6px;align-items:center;flex:none}
 .topskill .seg button{height:28px}
 .pop{position:fixed;top:calc(var(--top-h) + 6px);right:14px;width:min(440px,calc(100vw - 28px));z-index:30;background:var(--s2);border:1px solid var(--line3);border-radius:var(--r3);padding:14px;box-shadow:0 24px 60px -16px rgba(0,0,0,.85);display:grid;gap:10px;animation:rise .2s var(--ease)}
@@ -364,10 +375,13 @@ details.adv>.cb{padding:0 14px 14px}
   :root{--top-h:52px}
   .top{padding:0 12px;gap:8px}
   .bt{display:none}
-  .bar{margin:0 -14px;padding:10px 14px 8px}
-  .brow{flex-wrap:wrap}
-  .brow .search{flex-basis:100%}
-  .brow .seg{flex:1}
+  .bar{margin:0 -14px;padding:8px 14px 8px;gap:7px}
+  .search .in{height:36px;font-size:13.5px}
+  .search .kbd{display:none}
+  .search .in{padding-right:12px}
+  .brow select{height:36px;padding:0 6px;font-size:13px}
+  .cat{height:28px;padding:0 10px;font-size:12px}
+  body.inlist .top>.pill{display:none}
   .statusBtn .lab,#statusBtn .lab{display:none}
   #statusBtn{width:34px;padding:0}
   .topskill .seg button span{display:none}
@@ -451,10 +465,9 @@ details.adv>.cb{padding:0 14px 14px}
     <div class="bar">
       <div class="brow">
         <div class="search"><i class="ti ti-search"></i><input class="in" id="q" placeholder="Search skills, or type a prompt to see which skill fires" autocomplete="off"><span class="kbd">/</span></div>
-        <div class="seg" id="places"></div>
-        <select class="in" id="sortby" aria-label="Sort"><option value="name">A–Z</option><option value="date">Newest</option></select>
+        <select class="in" id="sortby" aria-label="Sort"><option value="name">A–Z</option><option value="date">New</option></select>
       </div>
-      <div class="cats" id="cats"></div>
+      <div class="crow" id="crow"><div class="seg sm" id="places"></div><span class="vsep"></span><div class="cats" id="cats"></div></div>
       <div class="qres" id="qres" hidden></div>
     </div>
     <div id="list"><div class="feat" style="margin-top:16px"><div class="skel" style="height:168px"></div><div class="skel" style="height:168px"></div><div class="skel" style="height:168px"></div></div><div class="empty" id="loading" style="margin-top:14px">Reading your skills…</div></div>
@@ -641,10 +654,14 @@ async function loadAll(){
 /* ---------------- routing ---------------- */
 function route(){const m=location.hash.match(/^#\/s\/([^/]+)(?:\/(triggers))?/);
   if(m){const s=S.skills.find(x=>x.name===decodeURIComponent(m[1]));if(s){const was=S.sk;S.sk=s;S.tab=m[2]?"trig":"launch";if(was!==s){S.ed=null;S.v={};S.job=null;S.form=null;S.closed=new Set();S.open=false}showSkill();return}}
-  S.view="list";document.body.classList.remove("inskill");$("topSkill").hidden=true;$("spop").hidden=true;$("v-list").hidden=false;$("v-skill").hidden=true;$("back").hidden=true;$("crumb").innerHTML="";document.title="Skill Launcher Cloud";renderList()}
+  S.view="list";document.body.classList.remove("inskill");document.body.classList.add("inlist");$("topSkill").hidden=true;$("spop").hidden=true;$("v-list").hidden=false;$("v-skill").hidden=true;$("back").hidden=true;$("crumb").innerHTML="";document.title="Skill Launcher Cloud";renderList()}
 window.addEventListener("hashchange",()=>{if(S.skills.length)route()});
 function pick(n){location.hash="#/s/"+encodeURIComponent(n)}
 $("back").onclick=()=>{location.hash="#/"};
+/* the chip row folds away while scrolling down the list, and comes back on the way up */
+{let ref=0;addEventListener("scroll",()=>{if(S.view!=="list")return;const y=scrollY,down=document.body.classList.contains("scrolldown");
+  if(y<80){if(down)document.body.classList.remove("scrolldown");ref=y;return}
+  if(!down&&y>ref){if(y-ref>40){document.body.classList.add("scrolldown");ref=y}}else if(down&&y<ref){if(ref-y>60){document.body.classList.remove("scrolldown");ref=y}}else ref=y},{passive:true})}
 $("infoBtn").onclick=e=>{e.stopPropagation();$("spop").hidden=!$("spop").hidden};
 document.addEventListener("click",e=>{const p=$("spop");if(!p.hidden&&!p.contains(e.target)&&e.target!==$("infoBtn"))p.hidden=true});
 
@@ -688,14 +705,14 @@ function renderList(){if(S.view!=="list")return;const q=S.q.toLowerCase().trim()
   $("places").querySelectorAll("button").forEach(b=>b.onclick=()=>setFilter(S.fam,b.dataset.p));
   $("cats").innerHTML=`<button class="cat${S.fam?"":" on"}" data-f="">All <span class="n">${sq.length}</span></button>`+FAMILIES.map(f=>{const n=sq.filter(s=>s.family===f[0]).length;return n||S.fam===f[0]?`<button class="cat${S.fam===f[0]?" on":""}" data-f="${f[0]}" style="--cc:${f[3]}"><span class="cd"></span>${esc(f[1])} <span class="n">${n}</span></button>`:""}).join("");
   $("cats").querySelectorAll(".cat").forEach(b=>b.onclick=()=>setFilter(S.fam===b.dataset.f?"":b.dataset.f,S.place));
-  $("cats").hidden=!!q;$("qres").hidden=!q;
+  $("crow").hidden=!!q;$("qres").hidden=!q;
   const r=$("qres");if(!q)r.innerHTML="";else if(!hit.length)r.innerHTML='<i class="ti ti-circle-dashed"></i>No skill fires. Claude reads none.';else if(hit.length===1)r.innerHTML=`<i class="ti ti-target-arrow" style="color:${hit[0][0].color}"></i><span>Fires <b style="color:var(--tx)">${esc(hit[0][0].name)}</b> on “${esc(hit[0][1])}”</span>`;else r.innerHTML=`<i class="ti ti-alert-triangle" style="color:var(--acc2)"></i><span style="color:#d9b8ff">Clash: ${hs.map(s=>esc(s.name)).join(" + ")}. Add a not-for phrase.</span>`;
-  $("q").placeholder=`Search ${S.skills.length} skills, or type a prompt to see which one fires`;
+  $("q").placeholder=matchMedia("(max-width:860px)").matches?`Search ${S.skills.length} skills or a prompt`:`Search ${S.skills.length} skills, or type a prompt to see which one fires`;
   document.querySelectorAll("#list [data-n]").forEach(t=>t.onclick=()=>pick(t.dataset.n))}
 let qT;$("q").oninput=e=>{S.q=e.target.value;clearTimeout(qT);qT=setTimeout(renderList,80)};
 
 /* ---------------- one skill ---------------- */
-function showSkill(){const s=S.sk;S.view="skill";document.body.classList.add("inskill");$("v-list").hidden=true;$("v-skill").hidden=false;$("back").hidden=false;$("topSkill").hidden=false;$("spop").hidden=true;window.scrollTo({top:0});
+function showSkill(){const s=S.sk;S.view="skill";document.body.classList.add("inskill");document.body.classList.remove("inlist","scrolldown");$("v-list").hidden=true;$("v-skill").hidden=false;$("back").hidden=false;$("topSkill").hidden=false;$("spop").hidden=true;window.scrollTo({top:0});
   document.title=s.name+" · Skill Launcher";$("crumb").innerHTML=`<i class="ti ti-chevron-right"></i><span class="tile" style="--c:${s.color}"><i class="ti ${s.icon}"></i></span><b>${esc(s.name)}</b>`;
   document.documentElement.style.setProperty("--c",s.color);
   $("stabs").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b.dataset.t===S.tab);b.onclick=()=>{location.hash="#/s/"+encodeURIComponent(s.name)+(b.dataset.t==="trig"?"/triggers":"")}});
