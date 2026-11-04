@@ -754,7 +754,7 @@ async function loadForm(){const s=S.sk;if(!s)return;S.bkey=null;
   if(S.sk!==s)return;
   const fallback=!d;d=d||{jobs:[{id:"ask",name:"Ask",icon:"ti-message-2",blurb:"This skill has no form yet: say what you want in plain words.",fields:[{id:"Task",type:"text",long:true,placeholder:"what you want done",group:"input"}],tail:""}]};
   d.jobs.forEach(j=>(j.fields||[]).forEach(f=>{const src=f.source||{cast:"profiles",style:"styles"}[f.type];
-    if(src)f.options=(f.type==="style"&&f.own?[{value:f.own,label:f.own,note:"Keep the source picture's look"}]:[]).concat(S.stock[src]||[]);else if(Array.isArray(f.options))f.options=f.options.map(o=>typeof o==="object"?o:{value:o,label:o})}));
+    if(src)f.options=(f.type==="style"&&f.own?[{value:f.own,label:f.own,note:"Keep the source picture's look"}]:[]).concat(f.type==="style"?[OFFICIAL_OPT]:[]).concat(S.stock[src]||[]);else if(Array.isArray(f.options))f.options=f.options.map(o=>typeof o==="object"?o:{value:o,label:o})}));
   S.form={...d,fallback};$("lalias").innerHTML=d.alias?`<span class="pill mut">${esc(d.alias)}</span>`:fallback?'<span class="pill warn">no form yet · plain text</span>':"";
   if(!S.job||!d.jobs.find(j=>j.id===S.job))S.job=d.jobs[0].id;defaults();launch()}
 const curJob=()=>S.form.jobs.find(j=>j.id===S.job);
@@ -784,8 +784,11 @@ const usePicker=f=>f.type==="cast"||f.type==="style"||((f.type==="one"||f.type==
 const srcKey=f=>f.source||{cast:"profiles",style:"styles"}[f.type]||(S.sk.name+":"+f.id);
 const recentOf=f=>store.get("sklc.recent."+srcKey(f),[]);
 function addRecent(f,v){if(v==null||v==="")return;const k="sklc.recent."+srcKey(f);store.set(k,[v].concat(store.get(k,[]).filter(x=>x!==v)).slice(0,8))}
+// A typed character name (not in the cast list) and the official art style (user 2026-11-04)
+const OFFICIAL="official",OFFICIAL_OPT={value:OFFICIAL,label:"Official art style",note:"The character's own series look, the same as the character; Claude searches for it",group:"From the character"};
+const optOf=(f,v)=>v==null||v===""?null:(f.options||[]).find(o=>o.value===v)||(f.type==="cast"?{value:v,label:v,typed:true}:null);
 const pretty=s=>String(s||"").replace(/[-_]+/g," ").trim();
-function optGroup(f,o){if(o.group)return o.group;
+function optGroup(f,o){if(o.group)return o.group;if(o.typed)return "Typed name";
   if(f.type==="cast"&&o.path){const m=String(o.path).match(/stories[\\/]+([^\\/]+)[\\/]+profiles/i);if(m)return pretty(m[1])}
   if(f.type==="style")return f.own&&o.value===f.own?"From the source":String(o.value).split("-")[0];
   const v=String(o.value);if(/[\\/]/.test(v)){const parts=v.split(/[\\/]/).filter(Boolean);return parts.length>1?parts[parts.length-2]:""}return ""}
@@ -794,13 +797,13 @@ function optLead(f,o,lg){const opts=f.options||[],k=Math.max(0,opts.indexOf(o));
   if(f.type==="cast")return `<span class="av${lg?" lg":""}" style="background:${CASTCOL[k%CASTCOL.length]}">${esc(String(o.label)[0]||"?")}</span>`;
   const ic=f.type==="style"?"ti-palette":f.source==="books"?"ti-book-2":f.source==="workflows"?"ti-topology-star":/^dirs:/.test(f.source||"")?"ti-folder":"ti-list";
   return lg?`<span class="sic"><i class="ti ${ic}"></i></span>`:""}
-function pickerField(f,sel,many){const opts=f.options||[],id=esc(f.id),find=v=>opts.find(o=>o.value===v),noun=f.type==="cast"?"character":f.type==="style"?"art style":f.source==="books"?"book":f.source==="workflows"?"workflow":/^dirs:/.test(f.source||"")?"folder":"option";
+function pickerField(f,sel,many){const opts=f.options||[],id=esc(f.id),find=v=>optOf(f,v),noun=f.type==="cast"?"character":f.type==="style"?"art style":f.source==="books"?"book":f.source==="workflows"?"workflow":/^dirs:/.test(f.source||"")?"folder":"option";
   let h;
   if(many){const on=sel.map(find).filter(Boolean);
     h=`<div class="pkmany">${on.map(o=>`<span class="chip on">${optLead(f,o)}${esc(o.label)}<button class="x" data-f="${id}" data-v="${esc(o.value)}" data-m="1" aria-label="Remove"><i class="ti ti-x"></i></button></span>`).join("")}<button class="chip" data-pk="${id}"><i class="ti ti-plus"></i>${on.length?"Add more":"Choose"} <span class="mono muted" style="font-size:11px">${opts.length}</span></button></div>`}
   else{const o=find(sel[0]);
     h=o?`<button class="pkbtn" data-pk="${id}">${optLead(f,o,true)}<span style="min-width:0"><span class="nm">${esc(o.label)}</span>${optSub(f,o)?`<span class="sb">${esc(optSub(f,o))}</span>`:""}</span><span class="chg"><i class="ti ti-arrows-exchange"></i>Change</span></button>`
-     :`<button class="pkbtn empty" data-pk="${id}"><i class="ti ti-search"></i><span>Choose ${noun==="art style"?"an":"a"} ${noun}…</span><span class="chg"><i class="ti ti-list-search"></i>${opts.length}</span></button>`}
+     :`<button class="pkbtn empty" data-pk="${id}"><i class="ti ti-search"></i><span>Choose ${noun==="art style"?"an":"a"} ${noun}${f.type==="cast"?" or type a name":""}…</span><span class="chg"><i class="ti ti-list-search"></i>${opts.length}</span></button>`}
   const rec=recentOf(f).filter(v=>!sel.includes(v)).map(find).filter(Boolean).slice(0,5);
   if(rec.length)h+=`<div class="quick"><span class="t">Recent</span>${rec.map(o=>`<button class="chip${f.type==="cast"?"":" np"}" data-f="${id}" data-v="${esc(o.value)}" data-m="${many?1:""}" title="${esc(o.note||"")}">${optLead(f,o)}${esc(o.label)}</button>`).join("")}</div>`;
   return h}
@@ -810,7 +813,7 @@ function pkSel(f){const v=S.v[f.id]??f.default;return f.type==="many"?(Array.isA
 function openPicker(fid){PK.f=fid;PK.q="";PK.g="";PK.kb=0;const f=pkField(),many=f.type==="many",title=f.type==="cast"?"Pick a character":f.type==="style"?"Pick an art style":"Pick "+(f.label||f.id).toLowerCase();
   $("pk").className="pk"+(f.type==="style"||f.options.some(o=>o.note&&o.note.length>30)?" wide":"");
   $("pk").innerHTML=`<div class="pkh"><div class="ttl"><h3>${esc(title)}${f.type==="cast"?' <span class="muted" style="font-weight:400;font-size:12.5px">· 18+ versions</span>':""}</h3><span class="n">${f.options.length}</span><button class="ib" id="pkx" aria-label="Close"><i class="ti ti-x"></i></button></div>
-    <div class="search"><i class="ti ti-search"></i><input class="in" id="pkq" placeholder="Search ${f.type==="cast"?"names, series":f.type==="style"?"styles, notes":"the list"}…" autocomplete="off"></div><div class="pkf" id="pkf"></div></div>
+    <div class="search"><i class="ti ti-search"></i><input class="in" id="pkq" placeholder="${f.type==="cast"?"Search or type a name, e.g. Nami from One Piece":"Search "+(f.type==="style"?"styles, notes":"the list")+"…"}" autocomplete="off"></div><div class="pkf" id="pkf"></div></div>
     <div class="pkb" id="pkb"></div>
     <div class="pkft"><span class="sumx" id="pksum"></span><button class="btn ghost" id="pkclr"><i class="ti ti-eraser"></i>Clear</button>${many?'<button class="btn pri" id="pkdone">Done</button>':""}</div>`;
   $("pkov").hidden=false;document.body.style.overflow="hidden";
@@ -832,12 +835,14 @@ function renderPk(){const f=pkField();if(!f)return;const opts=f.options||[],sel=
   if(q)list=list.filter(o=>[o.label,o.value,o.note,optGroup(f,o)].join(" ").toLowerCase().includes(q));
   const hl=s=>{s=esc(s);if(!q)return s;const i=s.toLowerCase().indexOf(esc(q));return i<0?s:s.slice(0,i)+"<mark>"+s.slice(i,i+esc(q).length)+"</mark>"+s.slice(i+esc(q).length)};
   const card=o=>{const on=sel.includes(o.value),sub=optSub(f,o);return `<button class="opt${on?" on":""}${sub.length>40?" tall":""}" data-ov="${esc(o.value)}">${optLead(f,o,true)}<span class="tx"><span class="nm">${hl(o.label)}${o.v2&&f.type==="cast"?'<span class="pill vio" style="height:17px;font-size:10px;padding:0 6px">v2</span>':""}</span>${sub?`<span class="sb">${hl(sub)}</span>`:""}</span>${on?'<i class="ti ti-circle-check-filled ck"></i>':""}</button>`};
-  let html;
-  if(!list.length)html=`<div class="empty">Nothing matches “${esc(PK.q)}”.${f.type!=="style"?"":" "}</div>`;
+  let html;const typed=f.type==="cast"&&!many&&PK.q.trim()&&!opts.some(o=>String(o.label).toLowerCase()===q||String(o.value).toLowerCase()===q)?PK.q.trim():"";
+  if(!list.length&&typed)html="";
+  else if(!list.length)html=`<div class="empty">Nothing matches “${esc(PK.q)}”.${f.type!=="style"?"":" "}</div>`;
   else if(!q&&!PK.g&&groups.length>1){const rv=rec.map(v=>opts.find(o=>o.value===v)).filter(Boolean).slice(0,6);
     html=(rv.length?`<div class="grp"><i class="ti ti-history"></i>Recent<span class="ln"></span></div><div class="opts">${rv.map(card).join("")}</div>`:"")+
       groups.concat(opts.some(o=>!optGroup(f,o))?[""]:[]).map(g=>{const it=list.filter(o=>optGroup(f,o)===g);return it.length?`<div class="grp">${esc(g||"Other")}<span class="mono" style="letter-spacing:0">${it.length}</span><span class="ln"></span></div><div class="opts">${it.map(card).join("")}</div>`:""}).join("")}
   else html=`<div class="opts">${list.map(card).join("")}</div>`;
+  if(typed){const tc=`<div class="opts"><button class="opt" data-ov="${esc(typed)}"><span class="sic"><i class="ti ti-pencil"></i></span><span class="tx"><span class="nm">Use “${esc(typed)}”</span><span class="sb">as typed: Claude finds the character's look</span></span></button></div>`;html=list.length?html+`<div class="grp"><i class="ti ti-pencil"></i>Not in the list?<span class="ln"></span></div>`+tc:tc}
   $("pkb").innerHTML=html;const os=[...$("pkb").querySelectorAll(".opt")];if(os[PK.kb])os[PK.kb].classList.add("kb");
   $("pksum").innerHTML=sel.length?"Chosen: <b style=\"color:var(--tx2)\">"+sel.map(v=>esc((opts.find(o=>o.value===v)||{label:v}).label)).join(", ")+"</b>":`${list.length} shown`;
   os.forEach(b=>b.onclick=()=>{const v=b.dataset.ov;addRecent(f,v);
@@ -883,13 +888,16 @@ $("bsave").onclick=()=>busy($("bsave"),async()=>{const s=S.sk,jid=S.job,txt=$("b
   const d=JSON.parse(await readText(e.sha,s.repo)),j=(d.jobs||[]).find(x=>x.id===jid);if(!j)throw new Error("This job is not in launcher.json any more. Reload.");
   if(txt.trim()){if(j.brief&&j.brief_default==null)j.brief_default=j.brief;j.brief=txt}else delete j.brief;
   await commit([{path,content:JSON.stringify(d,null,1)+"\n"}],`${s.name}: brief of ${jid} (cloud)`,s.repo);toast("Brief saved to GitHub");await loadAll()});
+// The cast's profile goes in the brief only when the file is in GitHub; stock.json paths are PC paths a cloud session cannot open (user 2026-11-04)
+function profileIn(o,repo){if(!o||!o.path)return "";const p=String(o.path).replace(/\\/g,"/"),m=p.match(/[^/]+\/profiles\/[^/]+$/),key=m?m[0]:p.split("/").pop();
+  for(const r of okRepos()){const f=S.rs[r.id].tree.find(x=>x.path===key||x.path.endsWith("/"+key));if(f)return (r.id===repo?"":`${r.id}/`)+f.path}return ""}
 function fillBrief(t,vals){return t.split("\n").map(l=>{let drop=false;const o=l.replace(/\{\{(\w+)\}\}/g,(m,k)=>{if(vals[k]==null||vals[k]===""){drop=true;return ""}return vals[k]});return drop?null:o}).filter(l=>l!==null).join("\n")}
 function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[],vals={skill:s.path.replace(/\/SKILL\.md$/,""),repo:`github.com/${OWNER}/${s.repo}`};const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
   for(const x of fields){const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
     if(x.type==="switch"){if(v){vals[x.id]="yes";lines.push(lab.padEnd(w)+"  yes")}continue}
     if(x.type==="image"){v=ATTACHED;vals[x.id]=v;if(x.main)v+=", main panel, keep as is";lines.push(lab.padEnd(w)+"  "+v);continue}
     if(v==null||v===""){if(isReq(x)){missing.push(lab);lines.push(lab.padEnd(w)+"  ?")}continue}
-    v=String(v);vals[x.id]=v;if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=o&&o.path?o.path.split(/[\\/]/).pop():"";v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"");vals[x.id]=v}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
+    v=String(v);vals[x.id]=v;if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=profileIn(o,s.repo);v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"");vals[x.id]=v}else if(x.type==="style"&&v===OFFICIAL){v="official art style, the same as the character's own series: search for it";vals[x.id]=v}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
     lines.push(lab.padEnd(w)+"  "+v)}
   let head=`Use the ${s.name} skill (read ${s.path} in github.com/${OWNER}/${s.repo} first).`;if(!S.form.fallback){head+=` Job: ${j.name.toLowerCase()}.`;if(j.follow)head+=`\nFollow ${j.follow}.`}
   let tail=j.tail||"";if(!S.form.fallback&&fields.some(x=>x.type!=="text"))tail=(tail?tail+" ":"")+"All inputs are answered: do not ask for them again.";
