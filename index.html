@@ -327,6 +327,8 @@ details.adv>.cb{padding:0 14px 14px}
 
 /* triggers tab */
 .trig{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:16px;align-items:start;max-width:1180px}
+#t-filter{max-width:720px}
+.fltbar{display:flex;gap:8px;align-items:center;margin-top:12px}
 .trig .gcard>.cb{display:block}
 .addrow{display:flex;gap:6px;margin-top:10px}
 .bub{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r3);overflow:hidden}
@@ -454,7 +456,7 @@ details.adv>.cb{padding:0 14px 14px}
     <div class="crumb" id="crumb"></div>
     <span class="sp"></span>
     <div class="topskill" id="topSkill" hidden>
-      <div class="seg acc" id="stabs"><button data-t="launch"><i class="ti ti-player-play"></i><span>Launch</span></button><button data-t="trig"><i class="ti ti-target-arrow"></i><span>Triggers</span></button></div>
+      <div class="seg acc" id="stabs"><button data-t="launch"><i class="ti ti-player-play"></i><span>Launch</span></button><button data-t="trig"><i class="ti ti-target-arrow"></i><span>Triggers</span></button><button data-t="filter" id="stabF" hidden><i class="ti ti-filter"></i><span>Filter</span></button></div>
       <button class="ib" id="infoBtn" aria-label="About this skill" title="About this skill"><i class="ti ti-info-circle"></i></button>
     </div>
     <span class="tk" id="tokTop" title="Skill descriptions Claude reads at session start"></span>
@@ -513,6 +515,8 @@ details.adv>.cb{padding:0 14px 14px}
         </div>
       </div>
     </div>
+
+    <div id="t-filter" hidden><div class="gcard open"><div class="ch"><span class="ic"><i class="ti ti-filter"></i></span><span class="t">Tag filter</span></div><div class="cb" id="fbody"></div></div></div>
 
     <div class="trig" id="t-trig" hidden>
       <div>
@@ -666,8 +670,8 @@ async function loadAll(){
 }
 
 /* ---------------- routing ---------------- */
-function route(){const m=location.hash.match(/^#\/s\/([^/]+)(?:\/(triggers))?/);
-  if(m){const k=decodeURIComponent(m[1]),s=S.skills.find(x=>x.uid===k)||S.skills.find(x=>x.name===k);if(s){const was=S.sk;S.sk=s;S.tab=m[2]?"trig":"launch";if(was!==s){S.ed=null;S.v={};S.job=null;S.form=null;S.closed=new Set();S.open=false}showSkill();return}}
+function route(){const m=location.hash.match(/^#\/s\/([^/]+)(?:\/(triggers|filter))?/);
+  if(m){const k=decodeURIComponent(m[1]),s=S.skills.find(x=>x.uid===k)||S.skills.find(x=>x.name===k);if(s){const was=S.sk;S.sk=s;S.tab=m[2]==="triggers"?"trig":m[2]==="filter"&&hasFlt(s)?"filter":"launch";if(was!==s){S.fl=null;S.ed=null;S.v={};S.job=null;S.form=null;S.closed=new Set();S.open=false}showSkill();return}}
   S.view="list";document.body.classList.remove("inskill");document.body.classList.add("inlist");$("topSkill").hidden=true;$("spop").hidden=true;$("v-list").hidden=false;$("v-skill").hidden=true;$("back").hidden=true;$("crumb").innerHTML="";document.title="Skill Launcher Cloud";renderList()}
 window.addEventListener("hashchange",()=>{if(S.skills.length)route()});
 function pick(n){location.hash="#/s/"+encodeURIComponent(n)}
@@ -735,7 +739,7 @@ let qT;$("q").oninput=e=>{S.q=e.target.value;clearTimeout(qT);qT=setTimeout(rend
 function showSkill(){const s=S.sk;S.view="skill";document.body.classList.add("inskill");document.body.classList.remove("inlist","scrolldown");$("v-list").hidden=true;$("v-skill").hidden=false;$("back").hidden=false;$("topSkill").hidden=false;$("spop").hidden=true;window.scrollTo({top:0});
   document.title=s.name+" · Skill Launcher";$("crumb").innerHTML=`<i class="ti ti-chevron-right"></i><span class="tile" style="--c:${s.color}"><i class="ti ${s.icon}"></i></span><b>${esc(s.name)}</b>`;
   document.documentElement.style.setProperty("--c",s.color);
-  $("stabs").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b.dataset.t===S.tab);b.onclick=()=>{location.hash="#/s/"+encodeURIComponent(s.uid)+(b.dataset.t==="trig"?"/triggers":"")}});
+  $("stabs").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b.dataset.t===S.tab);b.onclick=()=>{location.hash="#/s/"+encodeURIComponent(s.uid)+(b.dataset.t==="trig"?"/triggers":b.dataset.t==="filter"?"/filter":"")}});$("stabF").hidden=!hasFlt(s);
   $("spop").innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span class="tile" style="--c:${s.color};width:30px;height:30px;border-radius:9px"><i class="ti ${s.icon}" style="font-size:16px"></i></span><b style="font-size:14px;flex:1;overflow-wrap:anywhere">${esc(s.name)}</b><button class="ib" id="spopX" aria-label="Close"><i class="ti ti-x"></i></button></div>
     <div class="meta"><span class="pill dot" style="color:${s.color};background:color-mix(in srgb,${s.color} 12%,transparent)">${esc(fam(s.family)[1])}</span>
       ${repoTag(s)}<span class="pill ${s.mode==="auto"?"ok":s.mode==="manual"?"info":"mut"} dot">${s.mode==="auto"?"Loaded · auto":s.mode==="manual"?"Loaded · /"+esc(s.name)+" only":"Library"}</span><span id="lalias"></span></div>
@@ -743,8 +747,30 @@ function showSkill(){const s=S.sk;S.view="skill";document.body.classList.add("in
     <div class="mono muted" style="font-size:11.5px">${esc(s.repo)} · ${esc(s.path)}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">${REPOS.filter(r=>r.id!==s.repo).map(r=>`<button class="btn" data-mvr="${r.id}"><i class="ti ti-arrows-exchange"></i>Move to ${esc(r.id)}</button>`).join("")}<button class="btn danger" id="trash"><i class="ti ti-trash"></i>Remove this skill</button></div>`;
   $("spopX").onclick=()=>{$("spop").hidden=true};$("trash").onclick=trashSkill;$("spop").querySelectorAll("[data-mvr]").forEach(b=>b.onclick=()=>askMoveRepo(b.dataset.mvr));
-  $("t-launch").hidden=S.tab!=="launch";$("t-trig").hidden=S.tab!=="trig";
-  if(S.tab==="trig")trig();else if(!S.form)loadForm();else launch()}
+  $("t-launch").hidden=S.tab!=="launch";$("t-trig").hidden=S.tab!=="trig";$("t-filter").hidden=S.tab!=="filter";
+  if(S.tab==="filter")flt();else if(S.tab==="trig")trig();else if(!S.form)loadForm();else launch()}
+
+/* ---------------- tag filter: <skill>/reference/tag_filter*.txt, read right before a request goes to NovelAI ---------------- */
+const FLT_LISTS=[{id:"p",file:"tag_filter.txt",name:"Prompt",hint:"masterpiece&#10;best quality",head:"# Tags that never reach NovelAI, whoever added them. One per line."},{id:"n",file:"tag_filter_negative.txt",name:"Negative",hint:"worst quality&#10;very displeasing",head:"# Tags that never reach NovelAI's negative, whoever added them. One per line."}];
+const fltPath=(s,l=FLT_LISTS[0])=>`${s.area}/${s.name}/reference/${l.file}`;
+const hasFlt=s=>!!(S.rs[s.repo]&&!S.rs[s.repo].err&&S.rs[s.repo].tree.find(x=>x.path===fltPath(s)));
+const fltTags=t=>[...new Set(String(t||"").split(/[\n,]/).map(x=>x.replace(/^[#\s]+/,"").replace(/\s+/g," ").trim().toLowerCase()).filter(Boolean))];
+const fltFile=x=>x.head.concat(fltTags(x.text)).join("\n")+"\n";
+async function flt(){const s=S.sk;if(S.fl&&S.fl.uid===s.uid){fltDraw();return}
+  $("fbody").innerHTML='<div class="skel" style="height:120px"></div>';
+  try{const f={uid:s.uid};for(const l of FLT_LISTS){const e=S.rs[s.repo].tree.find(x=>x.path===fltPath(s,l)),t=e?await readText(e.sha,s.repo):l.head+"\n",ls=t.split("\n");
+      f[l.id]={head:ls.filter(x=>x.trim()[0]==="#"),text:ls.filter(x=>x.trim()&&x.trim()[0]!=="#").join("\n")};f[l.id].saved=e?fltFile(f[l.id]):""}
+    if(S.sk!==s)return;S.fl=f;fltDraw()}
+  catch(err){$("fbody").innerHTML=`<div class="warnbox">${esc(err.message)}</div>`}}
+const fltDirty=f=>FLT_LISTS.filter(l=>fltFile(f[l.id])!==f[l.id].saved&&(f[l.id].saved||fltTags(f[l.id].text).length));
+function fltSaveBtn(){const d=fltDirty(S.fl).length>0,b=$("fsave");b.disabled=!d;b.innerHTML=d?'<i class="ti ti-cloud-upload"></i>Save':'<i class="ti ti-check"></i>Saved'}
+function fltDraw(){const f=S.fl;
+  $("fbody").innerHTML=`<div class="help" style="margin:0 0 4px">Tags in these lists never reach NovelAI, whoever added them. One tag per line.</div>
+    ${FLT_LISTS.map(l=>`<div class="lbl">${esc(l.name)}</div><textarea class="in" data-fl="${l.id}" rows="7" spellcheck="false" aria-label="${esc(l.name)} tags to filter" placeholder="${l.hint}">${esc(f[l.id].text)}</textarea>`).join("")}
+    <div class="fltbar"><button class="btn pri" id="fsave"></button></div>`;
+  $("fbody").querySelectorAll("[data-fl]").forEach(x=>x.oninput=()=>{f[x.dataset.fl].text=x.value;fltSaveBtn()});
+  $("fsave").onclick=e=>{const s=S.sk,b=e.currentTarget;busy(b,async()=>{await commit(fltDirty(f).map(l=>({path:fltPath(s,l),content:fltFile(f[l.id])})),`${s.name}: tag filter (cloud)`,s.repo);S.fl=null;toast("Saved to GitHub");await loadAll()})};
+  fltSaveBtn()}
 
 /* ---------------- launch ---------------- */
 async function loadForm(){const s=S.sk;if(!s)return;S.bkey=null;
