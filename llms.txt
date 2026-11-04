@@ -1,24 +1,37 @@
 # Skill Launcher Cloud - agent guide
 
-A static page with no server: it edits the private GitHub repo Zoobot123/manga-skills through the GitHub API, with a token
-kept in the user's browser. An agent does not click this page. Use the repo directly (git or the gh CLI).
+A static page with no server: it edits two private GitHub repos through the GitHub API, with one token
+kept in the user's browser. An agent does not click this page. Use the repos directly (git or the gh CLI).
+
+## The two repos (user 2026-11-04)
+- Zoobot123/manga-skills   the NovelAI skills only (NovelAI pictures, manga, NovelAI text). Entry point: library/novelai-claude/SKILL.md.
+- Zoobot123/claude-skills  every other skill (ComfyUI, Anima, MiniMax, search, game, Blender, agents ...).
+  Exception: phone-nai and phone-manga stay in claude-skills, because the phone loads them from ~/claude-skills.
 
 ## Quick start
 ```
 gh api repos/Zoobot123/manga-skills/git/trees/main?recursive=1
-gh api repos/Zoobot123/manga-skills/contents/skills/<skill>/SKILL.md
+gh api repos/Zoobot123/claude-skills/git/trees/main?recursive=1
+gh api repos/Zoobot123/<repo>/contents/skills/<skill>/SKILL.md
 ```
 
-## Layout
-- skills/<name>/    skills Claude Code loads on the PC.
-- library/<name>/   stored skills, never loaded.
+## Layout (the same in both repos)
+- skills/<name>/    loaded skills (skills/README.md lists them).
+- library/<name>/   stored skills, never loaded (library/README.md in claude-skills; skills/README.md in manga-skills).
 - <name>/launcher.json   the skill's form: jobs, fields, prompt tail.
 - .skill-launcher/families.json   the user's category choices {skill: family}.
-- .skill-launcher/stock.json      dropdown lists, written by the PC sync.
-- .skill-launcher/pending.json    [{op: trash|move, skill, to}] done in the cloud. The next PC sync applies and clears them.
+- .skill-launcher/stock.json      dropdown lists, written by the PC sync (manga-skills).
+- .skill-launcher/pending.json    manga-skills only. Moves and removals done in the cloud, for the PC Skill Launcher sync:
+  [{op: trash|move|repo, skill, to, area?, at}]. op "repo" = the folder <area>/<skill>/ went to the repo in "to".
+  The next PC sync applies and clears them.
+
+## How the PC takes a cloud change
+- manga-skills: the PC Skill Launcher sync. Moving or removing a skill must also add a pending.json entry, or the sync puts it back.
+- claude-skills: skills-sync (git pull with rebase, PC and phone). git applies moves and removals by itself; no pending.json.
 
 ## Rules
+- A NovelAI skill goes in manga-skills; any other skill goes in claude-skills. To move one, move the whole folder
+  (same skills/ or library/ place), remove it from the old repo, and add the pending.json entry when the old repo is manga-skills.
 - Trigger phrases live in the SKILL.md description: "Trigger on 'a', 'b'. Not for: c."
-- Moving or removing a skill in the repo must also add a pending.json entry, or the PC sync puts it back.
 - Removing a skill needs the user's yes. Never commit a key or token. Every cast field says "Name, 18+ version".
 - With the PC on, use Skill Launcher instead: http://127.0.0.1:4340/llms.txt

@@ -1,4 +1,4 @@
-<!doctype html><!-- Agents: read llms.txt next to this page. This page has no server: it edits the GitHub repo directly. -->
+<!doctype html><!-- Agents: read llms.txt next to this page. This page has no server: it edits the two GitHub repos (manga-skills, claude-skills) directly. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -6,7 +6,7 @@
 <title>Skill Launcher Cloud</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0a0b0f">
-<meta name="app-version" content="2026-11-03.4">
+<meta name="app-version" content="2026-11-04.1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
@@ -432,14 +432,14 @@ details.adv>.cb{padding:0 14px 14px}
 </style>
 </head>
 <body>
-<div class="sr" id="agentNote">Agents: read llms.txt next to this page. Skills live in the GitHub repo; this page has no server.</div>
+<div class="sr" id="agentNote">Agents: read llms.txt next to this page. Skills live in two GitHub repos (manga-skills = NovelAI, claude-skills = the rest); this page has no server.</div>
 
 <!-- ============ login ============ -->
 <div class="login" id="login" hidden>
   <div class="logo"><i class="ti ti-bolt"></i></div>
   <h1>Skill <em>Launcher</em></h1>
   <p>Works with your PC off. It edits your skills in GitHub directly. Your token stays in this browser only; it is never sent anywhere except GitHub.</p>
-  <p>Make a token: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub, fine-grained token</a>. Repository access: only <b>manga-skills</b>. Permission: <b>Contents, read and write</b>.</p>
+  <p>Make a token: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub, fine-grained token</a>. Repository access: only <b>manga-skills</b> and <b>claude-skills</b>. Permission: <b>Contents, read and write</b>.</p>
   <input class="in" id="tok" type="password" placeholder="Paste your token" autocomplete="off" style="height:44px">
   <div class="warnbox" id="loginErr" hidden style="margin-top:10px"></div>
   <button class="go" id="loginGo" style="width:100%;margin-top:14px"><i class="ti ti-lock-open"></i><span>Open my skills</span></button>
@@ -468,7 +468,7 @@ details.adv>.cb{padding:0 14px 14px}
         <div class="search"><i class="ti ti-search"></i><input class="in" id="q" placeholder="Search skills, or type a prompt to see which skill fires" autocomplete="off"><span class="kbd">/</span></div>
         <select class="in" id="sortby" aria-label="Sort"><option value="name">A–Z</option><option value="date">New</option></select>
       </div>
-      <div class="crow" id="crow"><div class="seg sm" id="places"></div><span class="vsep"></span><div class="cats" id="cats"></div></div>
+      <div class="crow" id="crow"><div class="seg sm" id="repos"></div><span class="vsep"></span><div class="seg sm" id="places"></div><span class="vsep"></span><div class="cats" id="cats"></div></div>
       <div class="qres" id="qres" hidden></div>
     </div>
     <div id="list"><div class="feat" style="margin-top:16px"><div class="skel" style="height:168px"></div><div class="skel" style="height:168px"></div><div class="skel" style="height:168px"></div></div><div class="empty" id="loading" style="margin-top:14px">Reading your skills…</div></div>
@@ -518,6 +518,9 @@ details.adv>.cb{padding:0 14px 14px}
       <div>
         <div class="gcard open"><div class="ch"><span class="ic"><i class="ti ti-adjustments"></i></span><span class="t">Where it lives</span></div>
           <div class="cb">
+            <div class="lbl">Repo</div>
+            <div class="seg acc" id="trepo"></div>
+            <div class="help" id="trepohelp"></div>
             <div class="lbl">Load mode</div>
             <div class="seg acc" id="tmode"></div>
             <div class="help" id="tmodehelp"></div>
@@ -548,7 +551,7 @@ details.adv>.cb{padding:0 14px 14px}
   <div class="shh"><h2>Status</h2><button class="ib" id="sheetClose" aria-label="Close"><i class="ti ti-x"></i></button></div>
   <div class="shb">
     <div id="ipend"></div>
-    <div class="note">In the cloud you can search, build prompts, edit triggers, change category, move skills between Loaded and Library, and remove skills. Off, Forced and Sync need the PC.</div>
+    <div class="note">In the cloud you can search, build prompts, edit triggers, change category, move skills between Loaded and Library or between the two repos, and remove skills. Off, Forced and Sync need the PC.</div>
     <div class="log" id="ilog"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" id="reload"><i class="ti ti-refresh"></i>Reload from GitHub</button>
@@ -560,7 +563,14 @@ details.adv>.cb{padding:0 14px 14px}
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-const OWNER="Zoobot123",REPO="manga-skills",BRANCH="main",CD=".skill-launcher";
+const OWNER="Zoobot123",BRANCH="main",CD=".skill-launcher";
+/* Two repos, one page (user 2026-11-04): the NovelAI skills live in manga-skills, every other skill in claude-skills.
+   pc = how the PC takes a cloud change. "launcher": the PC Skill Launcher sync, which needs a pending.json entry for every
+   move or removal or it puts the skill back. "git": skills-sync (git pull on the PC and the phone), which applies it by itself. */
+const REPOS=[{id:"manga-skills",label:"NovelAI",icon:"ti-brush",color:"#f472b6",pc:"launcher",holds:"the NovelAI skills"},
+ {id:"claude-skills",label:"Claude",icon:"ti-robot",color:"#22d3ee",pc:"git",holds:"every skill that is not about NovelAI"}];
+const repoOf=id=>REPOS.find(r=>r.id===id)||REPOS[0];
+const R=id=>`/repos/${OWNER}/${id}`;
 const params=new URLSearchParams(location.search);
 const LOCAL=["localhost","127.0.0.1"].includes(location.hostname);
 const API=(LOCAL&&params.get("api"))||"https://api.github.com";   // a test server only on this PC
@@ -578,7 +588,7 @@ const GROUPS={source:["Source","ti-photo"],cast:["Cast & style","ti-users"],stor
 const COST={rolls:["Rolls NovelAI","warn"],"V4.5 rolls":["V4.5 rolls","info"],text:["Text only","ok"],"free size":["Free size","ok"]};
 const KEYS=/pst-[A-Za-z0-9_-]{20,}|sk-or-v1-[A-Za-z0-9]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AIza[0-9A-Za-z_-]{35}|ya29\.[0-9A-Za-z_-]{20,}|GOCSPX-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|hf_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}/;
 const saved=store.get("sklc.filter",{});
-const S={token:store.get("sklc.token",""),skills:[],sk:null,tree:[],head:"",form:null,job:null,v:{},q:"",open:false,view:"list",tab:"launch",fam:saved.fam||"",place:saved.place||"on",stock:{},fmap:{},pending:[],ed:null,prompt:null,closed:new Set()};
+const S={token:store.get("sklc.token",""),skills:[],sk:null,rs:{},form:null,job:null,v:{},q:"",open:false,view:"list",tab:"launch",fam:saved.fam||"",place:saved.place||"on",repo:saved.repo||"all",stock:{},ed:null,prompt:null,closed:new Set()};
 let presets=store.get("sklc.presets",{});
 function toast(t,err){const e=$("toast");e.textContent=t;e.classList.toggle("err",!!err);e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),err?4200:1800)}
 
@@ -586,20 +596,19 @@ function toast(t,err){const e=$("toast");e.textContent=t;e.classList.toggle("err
 async function gh(path,opt){
   const r=await fetch(API+path,{...opt,headers:{Authorization:"Bearer "+S.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt&&opt.body?{"Content-Type":"application/json"}:{})},cache:"no-store"});
   if(r.status===401)throw new Error("GitHub refused this token. Make a new one.");
-  if(r.status===403||r.status===429){const left=r.headers.get("x-ratelimit-remaining");throw new Error(left==="0"?"GitHub rate limit reached. Try again in a while.":"This token cannot do that. It needs Contents: read and write on manga-skills.")}
-  if(r.status===404)throw new Error("Not found on GitHub. Check that the token can see manga-skills.");
+  if(r.status===403||r.status===429){const left=r.headers.get("x-ratelimit-remaining");throw new Error(left==="0"?"GitHub rate limit reached. Try again in a while.":"This token cannot do that. It needs Contents: read and write on manga-skills and claude-skills.")}
+  if(r.status===404)throw new Error("Not found on GitHub. Check that the token can see manga-skills and claude-skills.");
   const d=await r.json().catch(()=>({}));
   if(!r.ok){const e=new Error(d.message||("GitHub said "+r.status));e.status=r.status;throw e}
   return d;}
-const R=`/repos/${OWNER}/${REPO}`;
-async function readHead(){const ref=await gh(`${R}/git/ref/heads/${BRANCH}`);const c=await gh(`${R}/git/commits/${ref.object.sha}`);return {sha:ref.object.sha,tree:c.tree.sha}}
-async function readText(sha){const b=await gh(`${R}/git/blobs/${sha}`);return (b.encoding==="base64"?b64d(b.content):b.content).split(String.fromCharCode(13)).join("")}   // git keeps LF; some files were committed with CRLF
-async function commit(entries,msg){   // one atomic commit; if GitHub moved on meanwhile, build it again on the new head
+async function readHead(repo){const ref=await gh(`${R(repo)}/git/ref/heads/${BRANCH}`);const c=await gh(`${R(repo)}/git/commits/${ref.object.sha}`);return {sha:ref.object.sha,tree:c.tree.sha}}
+async function readText(sha,repo){const b=await gh(`${R(repo)}/git/blobs/${sha}`);return (b.encoding==="base64"?b64d(b.content):b.content).split(String.fromCharCode(13)).join("")}   // git keeps LF; some files were committed with CRLF
+async function commit(entries,msg,repo){   // one atomic commit in one repo; if GitHub moved on meanwhile, build it again on the new head
   for(let tries=0;;tries++){
-    const h=await readHead();
-    const tree=await gh(`${R}/git/trees`,{method:"POST",body:JSON.stringify({base_tree:h.tree,tree:entries.map(e=>({path:e.path,mode:e.mode||"100644",type:"blob",...(e.del?{sha:null}:e.sha?{sha:e.sha}:{content:e.content})}))})});
-    const c=await gh(`${R}/git/commits`,{method:"POST",body:JSON.stringify({message:msg,tree:tree.sha,parents:[h.sha]})});
-    try{await gh(`${R}/git/refs/heads/${BRANCH}`,{method:"PATCH",body:JSON.stringify({sha:c.sha})});return c.sha}
+    const h=await readHead(repo);
+    const tree=await gh(`${R(repo)}/git/trees`,{method:"POST",body:JSON.stringify({base_tree:h.tree,tree:entries.map(e=>({path:e.path,mode:e.mode||"100644",type:"blob",...(e.del?{sha:null}:e.sha?{sha:e.sha}:{content:e.content})}))})});
+    const c=await gh(`${R(repo)}/git/commits`,{method:"POST",body:JSON.stringify({message:msg,tree:tree.sha,parents:[h.sha]})});
+    try{await gh(`${R(repo)}/git/refs/heads/${BRANCH}`,{method:"PATCH",body:JSON.stringify({sha:c.sha})});return c.sha}
     catch(e){if(e.status===422&&tries<2)continue;throw e}
   }}
 
@@ -618,7 +627,7 @@ function splitDesc(desc){desc=desc||"";let nots=[];const nm=desc.match(/\s*Not f
   if(!trig.length)for(const q of body.matchAll(QUOTE))if(!/^(http|E:|C:)/.test(q[1].trim()))trig.push(q[1]);
   const seen=new Set();trig=trig.map(t=>t.trim()).filter(t=>t&&!seen.has(t.toLowerCase())&&seen.add(t.toLowerCase()));return {body,trig,nots}}
 function joinDesc(b,t,n){let s=b.trim();if(t.length)s+=(s?" ":"")+"Trigger on "+t.map(x=>"'"+x.replace(/'/g,"")+"'").join(", ")+".";if(n.length)s+=" Not for: "+n.map(x=>x.replace(/,/g," ")).join(", ")+".";return s}
-function familyOf(n){if(S.fmap[n])return S.fmap[n];const l=n.toLowerCase();return (FAMILIES.find(f=>f[4].test(l))||FAMILIES[9])[0]}
+function familyOf(n,repo){const fm=(S.rs[repo]||{}).fmap||{};if(fm[n])return fm[n];const l=n.toLowerCase();return (FAMILIES.find(f=>f[4].test(l))||FAMILIES[9])[0]}
 const fam=id=>FAMILIES.find(f=>f[0]===id)||FAMILIES[9];
 function iconOf(n){for(const k in ICONS)if(n.includes(k))return ICONS[k];return "ti-sparkles"}
 const plain=s=>String(s||"").replace(/\*\*([^*]+)\*\*/g,"$1").replace(/`([^`]+)`/g,"$1").replace(/^>-?\s*/,"");
@@ -626,35 +635,39 @@ const isReq=f=>f.type==="image"?false:f.required!==undefined?f.required:!["text"
 const ATTACHED="the image I attach to this message";
 
 /* ---------------- load ---------------- */
+async function loadRepo(r){   // one repo: head, file tree, and the launcher's own files in .skill-launcher/
+  const h=await readHead(r.id);
+  const t=await gh(`${R(r.id)}/git/trees/${h.tree}?recursive=1`);if(t.truncated)throw new Error(r.id+" is too large for one read.");
+  const tree=t.tree.filter(x=>x.type==="blob"),find=p=>tree.find(x=>x.path===p);
+  const jsonAt=async p=>{const e=find(p);if(!e)return null;try{return JSON.parse(await readText(e.sha,r.id))}catch(err){return null}};
+  const [stock,fmap,pending]=await Promise.all([jsonAt(CD+"/stock.json"),jsonAt(CD+"/families.json"),jsonAt(CD+"/pending.json")]);
+  return {id:r.id,head:h.sha,tree,folders:Object.fromEntries(t.tree.filter(x=>x.type==="tree").map(x=>[x.path,x.sha])),stock:stock||{},fmap:fmap||{},pending:Array.isArray(pending)?pending:[]}}
+const okRepos=()=>REPOS.filter(r=>S.rs[r.id]&&!S.rs[r.id].err);
 async function loadAll(){
-  const h=await readHead();S.head=h.sha;
-  const t=await gh(`${R}/git/trees/${h.tree}?recursive=1`);if(t.truncated)throw new Error("The repo is too large for one read.");
-  S.tree=t.tree.filter(x=>x.type==="blob");
-  S.folders=Object.fromEntries(t.tree.filter(x=>x.type==="tree").map(x=>[x.path,x.sha]));
-  const find=p=>S.tree.find(x=>x.path===p);
-  const jsonAt=async p=>{const e=find(p);if(!e)return null;try{return JSON.parse(await readText(e.sha))}catch(err){return null}};
-  [S.stock,S.fmap,S.pending]=await Promise.all([jsonAt(CD+"/stock.json"),jsonAt(CD+"/families.json"),jsonAt(CD+"/pending.json")]);
-  S.stock=S.stock||{};S.fmap=S.fmap||{};S.pending=S.pending||[];
-  const mds=S.tree.filter(x=>/^(skills|library)\/[^/]+\/SKILL\.md$/.test(x.path));
-  const lfs=S.tree.filter(x=>/^(skills|library)\/[^/]+\/launcher\.json$/.test(x.path));
+  const got=await Promise.all(REPOS.map(r=>loadRepo(r).catch(e=>({id:r.id,err:e.message}))));
+  S.rs={};got.forEach(g=>{S.rs[g.id]=g});
+  if(!got.some(g=>!g.err))throw new Error(got[0].err);
+  S.stock={};got.filter(g=>!g.err).forEach(g=>{for(const k in g.stock)if(!(k in S.stock))S.stock[k]=g.stock[k]});
+  const mds=[],lfs=[];got.filter(g=>!g.err).forEach(g=>g.tree.forEach(x=>{
+    if(/^(skills|library)\/[^/]+\/SKILL\.md$/.test(x.path))mds.push({...x,repo:g.id});else if(/^(skills|library)\/[^/]+\/launcher\.json$/.test(x.path))lfs.push({...x,repo:g.id})}));
   const cache=store.get("sklc.meta2",{}),lcache=store.get("sklc.lmeta",{}),meta={},lmeta={};let done=0;
   const work=mds.map(e=>["md",e]).concat(lfs.map(e=>["lj",e]));
   await Promise.all(Array.from({length:8},async()=>{while(work.length){const [k,e]=work.pop();
-    if(k==="lj"){let m=lcache[e.sha];if(!m){try{const d=JSON.parse(await readText(e.sha));m=(d.jobs||[]).map(j=>({id:j.id,name:j.name,icon:j.icon||""}))}catch(err){m=[]}}lmeta[e.sha]=m;continue}
+    if(k==="lj"){let m=lcache[e.sha];if(!m){try{const d=JSON.parse(await readText(e.sha,e.repo));m=(d.jobs||[]).map(j=>({id:j.id,name:j.name,icon:j.icon||""}))}catch(err){m=[]}}lmeta[e.sha]=m;continue}
     let m=cache[e.sha];
-    if(!m){const text=await readText(e.sha);const f=parseFm((text.match(FM)||[])[1]||"");m={d:f.description||"",man:String(f["disable-model-invocation"]||"").toLowerCase()==="true"}}
+    if(!m){const text=await readText(e.sha,e.repo);const f=parseFm((text.match(FM)||[])[1]||"");m={d:f.description||"",man:String(f["disable-model-invocation"]||"").toLowerCase()==="true"}}
     meta[e.sha]=m;done++;const l=$("loading");if(l)l.textContent=`Reading your skills… ${done} of ${mds.length}`;}}));
   store.set("sklc.meta2",meta);store.set("sklc.lmeta",lmeta);
-  S.skills=mds.map(e=>{const [area,name]=e.path.split("/"),m=meta[e.sha],sp=splitDesc(m.d),f=familyOf(name);const mode=area==="library"?"library":m.man?"manual":"auto";const lj=find(`${area}/${name}/launcher.json`);
-    return {name,area,path:e.path,sha:e.sha,desc:m.d,body:sp.body,triggers:sp.trig,not_for:sp.nots,mode,family:f,color:fam(f)[3],icon:iconOf(name),launcher:!!lj,modes:lj?(lmeta[lj.sha]||[]):[],tokens:mode==="auto"?Math.round((name.length+1+m.d.length)/4):0}});
-  const rank=s=>(s.launcher?0:2)+(s.mode==="library"?4:0);S.skills.sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name));
-  if(S.sk)S.sk=S.skills.find(x=>x.name===S.sk.name)||null;
+  S.skills=mds.map(e=>{const [area,name]=e.path.split("/"),m=meta[e.sha],sp=splitDesc(m.d),f=familyOf(name,e.repo);const mode=area==="library"?"library":m.man?"manual":"auto";const lj=S.rs[e.repo].tree.find(x=>x.path===`${area}/${name}/launcher.json`);
+    return {uid:`${e.repo}/${area}/${name}`,repo:e.repo,name,area,path:e.path,sha:e.sha,desc:m.d,body:sp.body,triggers:sp.trig,not_for:sp.nots,mode,family:f,color:fam(f)[3],icon:iconOf(name),launcher:!!lj,modes:lj?(lmeta[lj.sha]||[]):[],tokens:mode==="auto"?Math.round((name.length+1+m.d.length)/4):0}});
+  const rank=s=>(s.launcher?0:2)+(s.mode==="library"?4:0),ri=s=>REPOS.findIndex(r=>r.id===s.repo);S.skills.sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name)||ri(a)-ri(b));
+  if(S.sk)S.sk=S.skills.find(x=>x.uid===S.sk.uid)||S.skills.find(x=>x.name===S.sk.name&&x.repo===S.sk.repo)||S.skills.find(x=>x.name===S.sk.name)||null;
   S.form=null;S.ed=null;if(S.sort==="date")loadDates();chrome();info();route();
 }
 
 /* ---------------- routing ---------------- */
 function route(){const m=location.hash.match(/^#\/s\/([^/]+)(?:\/(triggers))?/);
-  if(m){const s=S.skills.find(x=>x.name===decodeURIComponent(m[1]));if(s){const was=S.sk;S.sk=s;S.tab=m[2]?"trig":"launch";if(was!==s){S.ed=null;S.v={};S.job=null;S.form=null;S.closed=new Set();S.open=false}showSkill();return}}
+  if(m){const k=decodeURIComponent(m[1]),s=S.skills.find(x=>x.uid===k)||S.skills.find(x=>x.name===k);if(s){const was=S.sk;S.sk=s;S.tab=m[2]?"trig":"launch";if(was!==s){S.ed=null;S.v={};S.job=null;S.form=null;S.closed=new Set();S.open=false}showSkill();return}}
   S.view="list";document.body.classList.remove("inskill");document.body.classList.add("inlist");$("topSkill").hidden=true;$("spop").hidden=true;$("v-list").hidden=false;$("v-skill").hidden=true;$("back").hidden=true;$("crumb").innerHTML="";document.title="Skill Launcher Cloud";renderList()}
 window.addEventListener("hashchange",()=>{if(S.skills.length)route()});
 function pick(n){location.hash="#/s/"+encodeURIComponent(n)}
@@ -667,7 +680,8 @@ $("infoBtn").onclick=e=>{e.stopPropagation();$("spop").hidden=!$("spop").hidden}
 document.addEventListener("click",e=>{const p=$("spop");if(!p.hidden&&!p.contains(e.target)&&e.target!==$("infoBtn"))p.hidden=true});
 
 /* ---------------- chrome ---------------- */
-function chrome(){const p=S.pending.length;$("pendN").hidden=!p;$("pendN").textContent=p;
+const allPending=()=>okRepos().flatMap(r=>S.rs[r.id].pending.map(p=>({...p,repo:r.id})));
+function chrome(){const p=allPending().length;$("pendN").hidden=!p;$("pendN").textContent=p;
   const tot=S.skills.reduce((a,s)=>a+s.tokens,0);$("tokTop").innerHTML=`<b>${(tot/1000).toFixed(1)}k</b> tk at start`}
 
 /* ---------------- list: full-page skill picker ---------------- */
@@ -678,31 +692,36 @@ $("sortby").value=S.sort;
 const fmtDate=t=>t?new Date(t*1000).toISOString().slice(2,10):"";
 const ago=t=>{if(!t)return "";const s=Date.now()/1000-t;return s<5400?Math.round(s/60)+" min ago":s<129600?Math.round(s/3600)+" h ago":Math.round(s/86400)+" d ago"};
 $("sortby").onchange=e=>{S.sort=e.target.value;try{localStorage.setItem("sklc.sort",S.sort)}catch(err){}if(S.sort==="date")loadDates();renderList()};
-function setFilter(f,p){S.fam=f;S.place=p;store.set("sklc.filter",{fam:f,place:p});renderList()}
+function setFilter(f,p,r){S.fam=f;S.place=p;if(r!==undefined)S.repo=r;store.set("sklc.filter",{fam:f,place:p,repo:S.repo});renderList()}
+const repoTag=s=>{const r=repoOf(s.repo);return `<span class="pill" style="color:${r.color};background:color-mix(in srgb,${r.color} 13%,transparent)" title="${esc(OWNER+"/"+r.id)}"><i class="ti ${r.icon}"></i>${esc(r.label)}</span>`};
+const showRepo=()=>S.repo==="all"&&okRepos().length>1;
 const modeBadge=s=>s.mode==="manual"?'<span class="pill info">/manual</span>':s.mode==="library"?'<span class="pill mut">library</span>':"";
 function fcard(s){const ms=s.modes.slice(0,4),more=s.modes.length-ms.length;
-  return `<button class="fc" data-n="${esc(s.name)}" style="--c:${s.color}"><div class="hd"><span class="tile"><i class="ti ${s.icon}"></i></span><div style="min-width:0"><div class="nm">${esc(s.name)}</div><div class="sub">${s.modes.length} mode${s.modes.length===1?"":"s"} · ${esc(fam(s.family)[1])}${s.area==="library"?" · library":""}</div></div></div>
+  return `<button class="fc" data-n="${esc(s.uid)}" style="--c:${s.color}"><div class="hd"><span class="tile"><i class="ti ${s.icon}"></i></span><div style="min-width:0"><div class="nm">${esc(s.name)}</div><div class="sub">${s.modes.length} mode${s.modes.length===1?"":"s"} · ${esc(fam(s.family)[1])}${s.area==="library"?" · library":""}${showRepo()?" · "+esc(repoOf(s.repo).label):""}</div></div></div>
   <i class="ti ti-arrow-right go2"></i><div class="ds">${esc(plain(s.body)||"No description.")}</div>
   <div class="ms">${ms.map(m=>`<span class="m">${m.icon?`<i class="ti ${esc(m.icon)}"></i>`:""}${esc(m.name)}</span>`).join("")}${more>0?`<span class="m">+${more} more</span>`:""}</div></button>`}
 function card(s,hs){const hit=hs.includes(s);
-  return `<button class="card${hit?(hs.length>1?" clash":" hit"):""}${s.mode==="library"?" dim":""}" data-n="${esc(s.name)}" style="--c:${s.color}"><span class="tile"><i class="ti ${s.icon}"></i></span>
+  return `<button class="card${hit?(hs.length>1?" clash":" hit"):""}${s.mode==="library"?" dim":""}" data-n="${esc(s.uid)}" style="--c:${s.color}"><span class="tile"><i class="ti ${s.icon}"></i></span>
   <div class="bd"><div class="nm">${esc(s.name)}</div><div class="ds">${esc(plain(s.body)||"No description.")}</div>
-  <div class="ft">${s.launcher?`<span class="pill vio">${s.modes.length} modes</span>`:""}${modeBadge(s)}${S.sort==="date"&&s.modified?`<span class="pill mut">${ago(s.modified)}</span>`:s.mode==="auto"?`<span class="pill mut mono">${s.tokens} tk</span>`:""}</div></div></button>`}
+  <div class="ft">${showRepo()||S.q.trim()?repoTag(s):""}${s.launcher?`<span class="pill vio">${s.modes.length} modes</span>`:""}${modeBadge(s)}${S.sort==="date"&&s.modified?`<span class="pill mut">${ago(s.modified)}</span>`:s.mode==="auto"?`<span class="pill mut mono">${s.tokens} tk</span>`:""}</div></div></button>`}
 function renderList(){if(S.view!=="list")return;const q=S.q.toLowerCase().trim(),hit=q?fires(q):[],hs=hit.map(h=>h[0]);
-  const inPlace=s=>S.place==="all"||(S.place==="library")===(s.mode==="library");
-  let list=q?S.skills.filter(s=>s.name.includes(q)||hs.includes(s)||fam(s.family)[1].toLowerCase().includes(q)||plain(s.body).toLowerCase().includes(q)):S.skills.filter(s=>inPlace(s)&&(!S.fam||s.family===S.fam));
+  if(S.repo!=="all"&&!okRepos().some(r=>r.id===S.repo))S.repo="all";
+  const inRepo=s=>S.repo==="all"||s.repo===S.repo,inPlace=s=>S.place==="all"||(S.place==="library")===(s.mode==="library");
+  let list=q?S.skills.filter(s=>s.name.includes(q)||hs.includes(s)||fam(s.family)[1].toLowerCase().includes(q)||plain(s.body).toLowerCase().includes(q)||repoOf(s.repo).label.toLowerCase()===q):S.skills.filter(s=>inRepo(s)&&inPlace(s)&&(!S.fam||s.family===S.fam));
   if(q)list.sort((a,b)=>(hs.includes(b)-hs.includes(a))||(b.name.includes(q)-a.name.includes(q))||a.name.localeCompare(b.name));
   if(S.sort==="date")list.sort((a,b)=>(b.modified||0)-(a.modified||0)||a.name.localeCompare(b.name));
   let html="";
   if(!q&&S.sort!=="date"){
-    const feat=S.skills.filter(s=>s.launcher&&(!S.fam||s.family===S.fam)),rest=list.filter(s=>!s.launcher);
+    const feat=S.skills.filter(s=>s.launcher&&inRepo(s)&&(!S.fam||s.family===S.fam)),rest=list.filter(s=>!s.launcher);
     if(feat.length)html+=`<div class="sec"><h2>Ready to launch</h2><span class="n">${feat.length}</span><span class="ln"></span></div><div class="feat">${feat.map(fcard).join("")}</div>`;
     if(S.fam)html+=rest.length?`<div class="sec"><h2>Other skills</h2><span class="n">${rest.length}</span><span class="ln"></span></div><div class="grid">${rest.map(s=>card(s,hs)).join("")}</div>`:"";
     else html+=FAMILIES.map(f=>{const it=rest.filter(s=>s.family===f[0]);return it.length?`<div class="sec" style="--cc:${f[3]}"><span class="ic"><i class="ti ${f[2]}"></i></span><h2>${esc(f[1])}</h2><span class="n">${it.length}</span><span class="ln"></span></div><div class="grid">${it.map(s=>card(s,hs)).join("")}</div>`:""}).join("");
   }else html=`<div class="grid" style="margin-top:20px">${list.map(s=>card(s,hs)).join("")}</div>`;
   $("list").innerHTML=html.trim()?html:`<div class="empty" style="margin-top:24px">${q?"No skill matches.":"No skill here. Try All."}</div>`;
-  const sq=S.skills.filter(inPlace),nOn=S.skills.filter(s=>s.mode!=="library").length;
-  $("places").innerHTML=[["on","Loaded",nOn],["library","Library",S.skills.length-nOn],["all","All",S.skills.length]].map(([k,l,n])=>`<button class="${S.place===k?"on":""}" data-p="${k}">${l} <span class="mono muted" style="font-size:11px">${n}</span></button>`).join("");
+  const rq=S.skills.filter(inRepo),sq=rq.filter(inPlace),nOn=rq.filter(s=>s.mode!=="library").length;
+  $("repos").innerHTML=[["all","Both",S.skills.length,"ti-stack-2",""]].concat(REPOS.map(r=>{const g=S.rs[r.id];return [r.id,r.label,g&&!g.err?S.skills.filter(s=>s.repo===r.id).length:"!",r.icon,g&&g.err?`${r.id}: ${g.err}`:`${OWNER}/${r.id}: ${r.holds}`]})).map(([k,l,n,ic,t])=>`<button class="${S.repo===k?"on":""}" data-r="${k}" title="${esc(t)}"${n==="!"?" disabled":""}><i class="ti ${ic}"></i>${l} <span class="mono muted" style="font-size:11px">${n}</span></button>`).join("");
+  $("repos").querySelectorAll("button").forEach(b=>b.onclick=()=>setFilter(S.fam,S.place,b.dataset.r));
+  $("places").innerHTML=[["on","Loaded",nOn],["library","Library",rq.length-nOn],["all","All",rq.length]].map(([k,l,n])=>`<button class="${S.place===k?"on":""}" data-p="${k}">${l} <span class="mono muted" style="font-size:11px">${n}</span></button>`).join("");
   $("places").querySelectorAll("button").forEach(b=>b.onclick=()=>setFilter(S.fam,b.dataset.p));
   $("cats").innerHTML=`<button class="cat${S.fam?"":" on"}" data-f="">All <span class="n">${sq.length}</span></button>`+FAMILIES.map(f=>{const n=sq.filter(s=>s.family===f[0]).length;return n||S.fam===f[0]?`<button class="cat${S.fam===f[0]?" on":""}" data-f="${f[0]}" style="--cc:${f[3]}"><span class="cd"></span>${esc(f[1])} <span class="n">${n}</span></button>`:""}).join("");
   $("cats").querySelectorAll(".cat").forEach(b=>b.onclick=()=>setFilter(S.fam===b.dataset.f?"":b.dataset.f,S.place));
@@ -716,14 +735,14 @@ let qT;$("q").oninput=e=>{S.q=e.target.value;clearTimeout(qT);qT=setTimeout(rend
 function showSkill(){const s=S.sk;S.view="skill";document.body.classList.add("inskill");document.body.classList.remove("inlist","scrolldown");$("v-list").hidden=true;$("v-skill").hidden=false;$("back").hidden=false;$("topSkill").hidden=false;$("spop").hidden=true;window.scrollTo({top:0});
   document.title=s.name+" · Skill Launcher";$("crumb").innerHTML=`<i class="ti ti-chevron-right"></i><span class="tile" style="--c:${s.color}"><i class="ti ${s.icon}"></i></span><b>${esc(s.name)}</b>`;
   document.documentElement.style.setProperty("--c",s.color);
-  $("stabs").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b.dataset.t===S.tab);b.onclick=()=>{location.hash="#/s/"+encodeURIComponent(s.name)+(b.dataset.t==="trig"?"/triggers":"")}});
+  $("stabs").querySelectorAll("button").forEach(b=>{b.classList.toggle("on",b.dataset.t===S.tab);b.onclick=()=>{location.hash="#/s/"+encodeURIComponent(s.uid)+(b.dataset.t==="trig"?"/triggers":"")}});
   $("spop").innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span class="tile" style="--c:${s.color};width:30px;height:30px;border-radius:9px"><i class="ti ${s.icon}" style="font-size:16px"></i></span><b style="font-size:14px;flex:1;overflow-wrap:anywhere">${esc(s.name)}</b><button class="ib" id="spopX" aria-label="Close"><i class="ti ti-x"></i></button></div>
     <div class="meta"><span class="pill dot" style="color:${s.color};background:color-mix(in srgb,${s.color} 12%,transparent)">${esc(fam(s.family)[1])}</span>
-      <span class="pill ${s.mode==="auto"?"ok":s.mode==="manual"?"info":"mut"} dot">${s.mode==="auto"?"Loaded · auto":s.mode==="manual"?"Loaded · /"+esc(s.name)+" only":"Library"}</span><span id="lalias"></span></div>
+      ${repoTag(s)}<span class="pill ${s.mode==="auto"?"ok":s.mode==="manual"?"info":"mut"} dot">${s.mode==="auto"?"Loaded · auto":s.mode==="manual"?"Loaded · /"+esc(s.name)+" only":"Library"}</span><span id="lalias"></span></div>
     <div class="ds">${esc(plain(s.body)||"No description.")}</div>
-    <div class="mono muted" style="font-size:11.5px">${esc(s.path)}</div>
-    <div><button class="btn danger" id="trash"><i class="ti ti-trash"></i>Remove this skill</button></div>`;
-  $("spopX").onclick=()=>{$("spop").hidden=true};$("trash").onclick=trashSkill;
+    <div class="mono muted" style="font-size:11.5px">${esc(s.repo)} · ${esc(s.path)}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${REPOS.filter(r=>r.id!==s.repo).map(r=>`<button class="btn" data-mvr="${r.id}"><i class="ti ti-arrows-exchange"></i>Move to ${esc(r.id)}</button>`).join("")}<button class="btn danger" id="trash"><i class="ti ti-trash"></i>Remove this skill</button></div>`;
+  $("spopX").onclick=()=>{$("spop").hidden=true};$("trash").onclick=trashSkill;$("spop").querySelectorAll("[data-mvr]").forEach(b=>b.onclick=()=>askMoveRepo(b.dataset.mvr));
   $("t-launch").hidden=S.tab!=="launch";$("t-trig").hidden=S.tab!=="trig";
   if(S.tab==="trig")trig();else if(!S.form)loadForm();else launch()}
 
@@ -731,7 +750,7 @@ function showSkill(){const s=S.sk;S.view="skill";document.body.classList.add("in
 async function loadForm(){const s=S.sk;if(!s)return;S.bkey=null;
   $("modes").innerHTML='<div class="skel" style="height:46px"></div><div class="skel" style="height:46px;margin-top:4px"></div>';$("mhead").innerHTML="";
   $("lform").innerHTML='<div class="skel" style="height:120px"></div>';let d=null;
-  try{const e=S.tree.find(x=>x.path===`${s.area}/${s.name}/launcher.json`);if(e)d=JSON.parse(await readText(e.sha))}catch(err){$("lform").innerHTML=`<div class="warnbox">${esc(err.message)}</div>`;return}
+  try{const e=S.rs[s.repo].tree.find(x=>x.path===`${s.area}/${s.name}/launcher.json`);if(e)d=JSON.parse(await readText(e.sha,s.repo))}catch(err){$("lform").innerHTML=`<div class="warnbox">${esc(err.message)}</div>`;return}
   if(S.sk!==s)return;
   const fallback=!d;d=d||{jobs:[{id:"ask",name:"Ask",icon:"ti-message-2",blurb:"This skill has no form yet: say what you want in plain words.",fields:[{id:"Task",type:"text",long:true,placeholder:"what you want done",group:"input"}],tail:""}]};
   d.jobs.forEach(j=>(j.fields||[]).forEach(f=>{const src=f.source||{cast:"profiles",style:"styles"}[f.type];
@@ -859,20 +878,20 @@ $("bta").oninput=()=>{const j=curJob(),txt=$("bta").value;j.brief=txt;const e=br
 $("breset").onclick=()=>{const j=curJob();if(!j.brief_default)return;$("bta").value=j.brief_default;$("bta").oninput();toast("Default text back. Tap Save to keep it.")};
 $("bsave").onclick=()=>busy($("bsave"),async()=>{const s=S.sk,jid=S.job,txt=$("bta").value.split(String.fromCharCode(13)).join("");
   const err=briefCheck(txt,curJob());if(err)throw new Error(err);
-  const path=`${s.area}/${s.name}/launcher.json`,h=await readHead(),t=await gh(`${R}/git/trees/${h.tree}?recursive=1`),e=t.tree.find(x=>x.path===path&&x.type==="blob");
+  const path=`${s.area}/${s.name}/launcher.json`,h=await readHead(s.repo),t=await gh(`${R(s.repo)}/git/trees/${h.tree}?recursive=1`),e=t.tree.find(x=>x.path===path&&x.type==="blob");
   if(!e)throw new Error("launcher.json is not in GitHub.");
-  const d=JSON.parse(await readText(e.sha)),j=(d.jobs||[]).find(x=>x.id===jid);if(!j)throw new Error("This job is not in launcher.json any more. Reload.");
+  const d=JSON.parse(await readText(e.sha,s.repo)),j=(d.jobs||[]).find(x=>x.id===jid);if(!j)throw new Error("This job is not in launcher.json any more. Reload.");
   if(txt.trim()){if(j.brief&&j.brief_default==null)j.brief_default=j.brief;j.brief=txt}else delete j.brief;
-  await commit([{path,content:JSON.stringify(d,null,1)+"\n"}],`${s.name}: brief of ${jid} (cloud)`);toast("Brief saved to GitHub");await loadAll()});
+  await commit([{path,content:JSON.stringify(d,null,1)+"\n"}],`${s.name}: brief of ${jid} (cloud)`,s.repo);toast("Brief saved to GitHub");await loadAll()});
 function fillBrief(t,vals){return t.split("\n").map(l=>{let drop=false;const o=l.replace(/\{\{(\w+)\}\}/g,(m,k)=>{if(vals[k]==null||vals[k]===""){drop=true;return ""}return vals[k]});return drop?null:o}).filter(l=>l!==null).join("\n")}
-function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[],vals={skill:s.path.replace(/\/SKILL\.md$/,""),repo:`github.com/${OWNER}/${REPO}`};const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
+function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[],vals={skill:s.path.replace(/\/SKILL\.md$/,""),repo:`github.com/${OWNER}/${s.repo}`};const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
   for(const x of fields){const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
     if(x.type==="switch"){if(v){vals[x.id]="yes";lines.push(lab.padEnd(w)+"  yes")}continue}
     if(x.type==="image"){v=ATTACHED;vals[x.id]=v;if(x.main)v+=", main panel, keep as is";lines.push(lab.padEnd(w)+"  "+v);continue}
     if(v==null||v===""){if(isReq(x)){missing.push(lab);lines.push(lab.padEnd(w)+"  ?")}continue}
     v=String(v);vals[x.id]=v;if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=o&&o.path?o.path.split(/[\\/]/).pop():"";v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"");vals[x.id]=v}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
     lines.push(lab.padEnd(w)+"  "+v)}
-  let head=`Use the ${s.name} skill (read ${s.path} in github.com/${OWNER}/${REPO} first).`;if(!S.form.fallback){head+=` Job: ${j.name.toLowerCase()}.`;if(j.follow)head+=`\nFollow ${j.follow}.`}
+  let head=`Use the ${s.name} skill (read ${s.path} in github.com/${OWNER}/${s.repo} first).`;if(!S.form.fallback){head+=` Job: ${j.name.toLowerCase()}.`;if(j.follow)head+=`\nFollow ${j.follow}.`}
   let tail=j.tail||"";if(!S.form.fallback&&fields.some(x=>x.type!=="text"))tail=(tail?tail+" ":"")+"All inputs are answered: do not ask for them again.";
   const text=j.brief&&!S.form.fallback?fillBrief(j.brief,vals):head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
   $("out").innerHTML=esc(text).replace(/(\S.*?)  \?$/gm,'<span class="miss">$1  ?</span>');const tk=Math.round(text.length/4)+" tk";$("tk").textContent=tk;$("peekTk").textContent="· "+tk;
@@ -892,6 +911,9 @@ const MODES={auto:"Claude picks it by meaning from the description.",manual:"Onl
 function edInit(){const s=S.sk;S.ed={skill:s.name,trig:s.triggers.slice(),not:s.not_for.slice(),body:s.body}}
 function trig(){const s=S.sk;if(!s)return;if(!S.ed||S.ed.skill!==s.name)edInit();const e=S.ed;
   $("tfam").innerHTML=FAMILIES.map(f=>`<option value="${f[0]}"${f[0]===s.family?" selected":""}>${esc(f[1])}</option>`).join("");
+  $("trepo").innerHTML=REPOS.map(r=>`<button class="${s.repo===r.id?"on":""}" data-r="${r.id}" title="${esc(OWNER+"/"+r.id)}"${S.rs[r.id]&&!S.rs[r.id].err?"":" disabled"}><i class="ti ${r.icon}"></i>${esc(r.id)}</button>`).join("");
+  $("trepo").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(b.dataset.r!==s.repo)askMoveRepo(b.dataset.r)});
+  $("trepohelp").textContent=`${s.repo} holds ${repoOf(s.repo).holds}. Tap the other one to move this skill there.`;
   $("tmode").innerHTML=[["auto","ti-sparkles"],["manual","ti-slash"],["library","ti-archive"]].map(([m,i])=>`<button class="${s.mode===m?"on":""}" data-m="${m}"><i class="ti ${i}"></i>${m[0].toUpperCase()+m.slice(1)}</button>`).join("");
   $("tmode").querySelectorAll("button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));$("tmodehelp").textContent=MODES[s.mode];
   $("ton").innerHTML=e.trig.map((p,i)=>`<span class="chip trg">${esc(p)}<button class="x" data-rm="${i}" aria-label="Remove"><i class="ti ti-x"></i></button></span>`).join("")||'<span class="help" style="margin:0">No phrases yet.</span>';
@@ -904,26 +926,52 @@ $("tbody").oninput=()=>{if(S.ed){S.ed.body=$("tbody").value;trig()}};
 function addPhrase(id,k){const v=$(id).value.trim();if(!v||!S.ed)return;if(!S.ed[k].includes(v))S.ed[k].push(v);$(id).value="";trig()}
 $("taddb").onclick=()=>addPhrase("tadd","trig");$("tnaddb").onclick=()=>addPhrase("tnadd","not");$("tadd").onkeydown=e=>{if(e.key==="Enter")addPhrase("tadd","trig")};$("tnadd").onkeydown=e=>{if(e.key==="Enter")addPhrase("tnadd","not")};
 async function busy(btn,fn){if(btn)btn.setAttribute("aria-busy","true");try{await fn()}catch(e){toast(e.message,true)}finally{if(btn)btn.removeAttribute("aria-busy")}}
-async function freshText(s){const h=await readHead(),t=await gh(`${R}/git/trees/${h.tree}?recursive=1`);S.tree=t.tree.filter(x=>x.type==="blob");const e=S.tree.find(x=>x.path===s.path);if(!e)throw new Error(s.name+" is no longer in GitHub. Reload.");return readText(e.sha)}
+async function freshText(s){const g=S.rs[s.repo],h=await readHead(s.repo),t=await gh(`${R(s.repo)}/git/trees/${h.tree}?recursive=1`);g.tree=t.tree.filter(x=>x.type==="blob");const e=g.tree.find(x=>x.path===s.path);if(!e)throw new Error(s.name+" is no longer in "+s.repo+". Reload.");return readText(e.sha,s.repo)}
 $("tsave").onclick=()=>busy($("tsave"),async()=>{const e=S.ed,s=S.sk;if(!e)return;const d=joinDesc(e.body,e.trig,e.not);if(d.length>1024)throw new Error(`Description is ${d.length} characters; the limit is 1024.`);if(KEYS.test(d))throw new Error("That text has a key in it. Remove it first.");
-  const text=await freshText(s);await commit([{path:s.path,content:fmSet(text,"description",yq(d))}],`Triggers of ${s.name} (cloud)`);toast("Saved to GitHub");await loadAll()});
+  const text=await freshText(s);await commit([{path:s.path,content:fmSet(text,"description",yq(d))}],`Triggers of ${s.name} (cloud)`,s.repo);toast("Saved to GitHub");await loadAll()});
 async function setMode(m){const s=S.sk;if(m===s.mode)return;await busy(null,async()=>{
-  if(m==="library"||s.area==="library"){await moveTo(s,m==="library"?"library":"skills",m==="manual")}else{const text=await freshText(s);await commit([{path:s.path,content:fmSet(text,"disable-model-invocation",m==="manual"?"true":null)}],`${s.name}: ${m} (cloud)`)}
+  if(m==="library"||s.area==="library"){await moveTo(s,m==="library"?"library":"skills",m==="manual")}else{const text=await freshText(s);await commit([{path:s.path,content:fmSet(text,"disable-model-invocation",m==="manual"?"true":null)}],`${s.name}: ${m} (cloud)`,s.repo)}
   toast(`${s.name}: ${m}`);await loadAll()})}
-async function moveTo(s,to,manual){const pre=`${s.area}/${s.name}/`,files=S.tree.filter(x=>x.path.startsWith(pre));const es=[];
+/* the PC Skill Launcher sync needs a pending.json entry for each cloud move or removal in its repo; git-synced repos do not */
+function pendEntry(s,op){const r=repoOf(s.repo),g=S.rs[s.repo];if(r.pc!=="launcher")return [];
+  return [{path:CD+"/pending.json",content:JSON.stringify(g.pending.filter(p=>!(p.skill===s.name&&(!p.area||p.area===s.area))).concat({...op,skill:s.name,at:new Date().toISOString()}),null,1)+"\n"}]}
+async function moveTo(s,to,manual){const pre=`${s.area}/${s.name}/`,files=S.rs[s.repo].tree.filter(x=>x.path.startsWith(pre));const es=[];
   for(const f of files){es.push({path:f.path,del:true});if(!(manual&&f.path===s.path))es.push({path:`${to}/${s.name}/`+f.path.slice(pre.length),sha:f.sha,mode:f.mode})}
-  if(manual)es.push({path:`${to}/${s.name}/SKILL.md`,content:fmSet(await readText(s.sha),"disable-model-invocation","true")});
-  es.push({path:CD+"/pending.json",content:JSON.stringify(S.pending.filter(p=>p.skill!==s.name).concat({op:"move",skill:s.name,to,at:new Date().toISOString()}),null,1)+"\n"});
-  await commit(es,`Move ${s.name} to ${to}/ (cloud)`)}
-$("tfam").onchange=e=>busy(null,async()=>{const s=S.sk,m={...S.fmap,[s.name]:e.target.value};await commit([{path:CD+"/families.json",content:JSON.stringify(m,null,1)+"\n"}],`Category of ${s.name} (cloud)`);toast("Category saved");await loadAll()});
-function trashSkill(){const s=S.sk;if(!s||!confirm(`Remove ${s.name}?\n\nIt is removed from GitHub now (its history stays). The next PC sync sends the PC copy to the Recycle Bin.`))return;
-  busy(null,async()=>{const pre=`${s.area}/${s.name}/`,es=S.tree.filter(x=>x.path.startsWith(pre)).map(f=>({path:f.path,del:true}));
-    es.push({path:CD+"/pending.json",content:JSON.stringify(S.pending.filter(p=>p.skill!==s.name).concat({op:"trash",skill:s.name,at:new Date().toISOString()}),null,1)+"\n"});
-    await commit(es,`Trash skill ${s.name} (cloud)`);S.sk=null;S.v={};S.job=null;toast(s.name+" removed from GitHub");location.hash="#/";await loadAll()})}
+  if(manual)es.push({path:`${to}/${s.name}/SKILL.md`,content:fmSet(await readText(s.sha,s.repo),"disable-model-invocation","true")});
+  es.push(...pendEntry(s,{op:"move",to}));
+  await commit(es,`Move ${s.name} to ${to}/ (cloud)`,s.repo)}
+/* move a whole skill folder to the other repo: copy every file there first (one commit), then remove it here (one commit),
+   so a failure in between leaves two copies, never none */
+async function moveRepo(s,to){const g=S.rs[s.repo],d=S.rs[to];if(!d||d.err)throw new Error("Cannot read "+to+". The token needs Contents: read and write on it.");
+  const pre=`${s.area}/${s.name}/`,h=await readHead(to),t=await gh(`${R(to)}/git/trees/${h.tree}?recursive=1`);
+  if(t.tree.some(x=>x.path.startsWith(pre)))throw new Error(`${to} already has ${pre}. Remove that copy first.`);
+  const files=g.tree.filter(x=>x.path.startsWith(pre)),work=files.slice(),es=[];let n=0;
+  await Promise.all(Array.from({length:6},async()=>{while(work.length){const f=work.pop();
+    const b=await gh(`${R(s.repo)}/git/blobs/${f.sha}`);
+    const nb=await gh(`${R(to)}/git/blobs`,{method:"POST",body:JSON.stringify({content:String(b.content||"").replace(/\n/g,""),encoding:"base64"})});
+    es.push({path:f.path,sha:nb.sha,mode:f.mode});n++;if(n%10===0||n===files.length)toast(`Copying ${s.name} to ${to}: ${n} of ${files.length}`)}}));
+  const fm=g.fmap[s.name];if(fm&&!d.fmap[s.name])es.push({path:CD+"/families.json",content:JSON.stringify({...d.fmap,[s.name]:fm},null,1)+"\n"});
+  const stale=d.pending.filter(p=>p.skill===s.name&&(!p.area||p.area===s.area));   // an old "moved out" note must not send it away again
+  if(stale.length)es.push({path:CD+"/pending.json",content:JSON.stringify(d.pending.filter(p=>!stale.includes(p)),null,1)+"\n"});
+  await commit(es,`Move ${s.name} in from ${s.repo} (cloud)`,to);
+  await commit(files.map(f=>({path:f.path,del:true})).concat(pendEntry(s,{op:"repo",area:s.area,to:`${OWNER}/${to}`})),`Move ${s.name} to ${to} (cloud)`,s.repo)}
+function askMoveRepo(to){const s=S.sk;if(!s||to===s.repo)return;const r=repoOf(to);
+  if(!confirm(`Move ${s.name} to ${to}?\n\n${to} holds ${r.holds}. The whole folder ${s.area}/${s.name}/ is copied there, then removed from ${s.repo} (history stays in both).`))return;
+  busy(null,async()=>{await moveRepo(s,to);S.sk={...s,repo:to,uid:`${to}/${s.area}/${s.name}`};toast(`${s.name} is now in ${to}`);await loadAll();if(S.sk)location.hash="#/s/"+encodeURIComponent(S.sk.uid)+(S.tab==="trig"?"/triggers":"")})}
+$("tfam").onchange=e=>busy(null,async()=>{const s=S.sk,m={...S.rs[s.repo].fmap,[s.name]:e.target.value};await commit([{path:CD+"/families.json",content:JSON.stringify(m,null,1)+"\n"}],`Category of ${s.name} (cloud)`,s.repo);toast("Category saved");await loadAll()});
+function trashSkill(){const s=S.sk;if(!s||!confirm(`Remove ${s.name} from ${s.repo}?\n\nIt is removed from GitHub now (its history stays). `+(repoOf(s.repo).pc==="launcher"?"The next PC sync sends the PC copy to the Recycle Bin.":"The next skills-sync removes it on the PC and the phone.")))return;
+  busy(null,async()=>{const pre=`${s.area}/${s.name}/`,es=S.rs[s.repo].tree.filter(x=>x.path.startsWith(pre)).map(f=>({path:f.path,del:true}));
+    es.push(...pendEntry(s,{op:"trash"}));
+    await commit(es,`Trash skill ${s.name} (cloud)`,s.repo);S.sk=null;S.v={};S.job=null;toast(s.name+" removed from GitHub");location.hash="#/";await loadAll()})}
 
 /* ---------------- status sheet ---------------- */
-function info(){$("ipend").innerHTML=S.pending.length?`<div class="warnbox"><b>Waiting for the PC (${S.pending.length})</b> · the next PC sync applies these.<div class="mono" style="margin-top:6px;font-size:12px;color:var(--tx2)">${S.pending.map(p=>`${esc(p.op)} ${esc(p.skill)}${p.to?" → "+esc(p.to):""}`).join("<br>")}</div></div>`:'<div class="note"><i class="ti ti-circle-check" style="color:var(--ok)"></i> Nothing waiting for the PC.</div>';
-  const lib=S.skills.filter(s=>s.area==="library").length;$("ilog").textContent=`repo     ${OWNER}/${REPO}\nbranch   ${BRANCH} @ ${(S.head||"").slice(0,7)}\nskills   ${S.skills.length - lib} loaded, ${lib} in the library\nlists    ${Object.keys(S.stock).length ? Object.keys(S.stock).join(", ") : "none yet (a PC sync adds them)"}`}
+function info(){const pend=allPending(),SHOW=20;
+  $("ipend").innerHTML=(pend.length?`<div class="warnbox"><b>Waiting for the PC (${pend.length})</b> · the next PC Skill Launcher sync applies these.<div class="mono" style="margin-top:6px;font-size:12px;color:var(--tx2)">${pend.slice(0,SHOW).map(p=>`${esc(p.repo)}: ${esc(p.op)} ${esc(p.skill)}${p.to?" → "+esc(p.to):""}`).join("<br>")}${pend.length>SHOW?`<br>+${pend.length-SHOW} more`:""}</div></div>`:'<div class="note"><i class="ti ti-circle-check" style="color:var(--ok)"></i> Nothing waiting for the PC.</div>')
+    +REPOS.filter(r=>S.rs[r.id]&&S.rs[r.id].err).map(r=>`<div class="warnbox" style="margin-top:8px"><b>${esc(r.id)} not read</b> · ${esc(S.rs[r.id].err)} Give the token access to both repos.</div>`).join("");
+  $("ilog").textContent=REPOS.map(r=>{const g=S.rs[r.id];if(!g)return "";if(g.err)return `${(r.label+"").padEnd(8)} ${OWNER}/${r.id}  NOT READ`;
+    const mine=S.skills.filter(s=>s.repo===r.id),lib=mine.filter(s=>s.area==="library").length;
+    return `${r.label.padEnd(8)} ${OWNER}/${r.id}\n         ${BRANCH} @ ${(g.head||"").slice(0,7)} · ${mine.length-lib} loaded, ${lib} in the library · PC: ${r.pc==="launcher"?"Skill Launcher sync":"skills-sync (git)"}`}).filter(Boolean).join("\n")
+    +`\nlists    ${Object.keys(S.stock).length ? Object.keys(S.stock).join(", ") : "none yet (a PC sync adds them)"}`}
 function sheet(on){$("sheet").classList.toggle("on",on);$("scrim").classList.toggle("on",on);if(on)info()}
 $("statusBtn").onclick=()=>sheet(true);$("sheetClose").onclick=()=>sheet(false);$("scrim").onclick=()=>sheet(false);
 $("reload").onclick=()=>busy($("reload"),async()=>{await loadAll();toast("Up to date")});
@@ -931,10 +979,10 @@ $("logout").onclick=()=>{if(!confirm("Forget the token in this browser?"))return
 
 /* GitHub has no file dates in a tree: ask for each skill's last commit, cached by the folder's hash */
 async function loadDates(){const cache=store.get("sklc.dates",{}),todo=[];
-  for(const s of S.skills){const k=S.folders[`${s.area}/${s.name}`];if(cache[k])s.modified=cache[k];else todo.push([s,k])}
+  for(const s of S.skills){const k=s.repo+":"+(S.rs[s.repo].folders[`${s.area}/${s.name}`]||"");if(cache[k])s.modified=cache[k];else todo.push([s,k])}
   renderList();let n=0;
   await Promise.all(Array.from({length:8},async()=>{while(todo.length){const [s,k]=todo.pop();
-    try{const c=await gh(`${R}/commits?sha=${BRANCH}&per_page=1&path=${encodeURIComponent(s.area+"/"+s.name)}`);if(c[0]){s.modified=Math.round(Date.parse(c[0].commit.committer.date)/1000);cache[k]=s.modified}}catch(e){toast(e.message,true);todo.length=0}
+    try{const c=await gh(`${R(s.repo)}/commits?sha=${BRANCH}&per_page=1&path=${encodeURIComponent(s.area+"/"+s.name)}`);if(c[0]){s.modified=Math.round(Date.parse(c[0].commit.committer.date)/1000);cache[k]=s.modified}}catch(e){toast(e.message,true);todo.length=0}
     if(++n%20===0)renderList()}}));
   store.set("sklc.dates",cache);renderList()}
 
