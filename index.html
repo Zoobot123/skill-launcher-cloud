@@ -48,6 +48,7 @@ a{color:inherit}
 .ib i{font-size:16px}
 .in{width:100%;height:36px;padding:0 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--line2);outline:none;font-size:13.5px;transition:border-color .15s,box-shadow .15s}
 .in::placeholder{color:var(--tx3)}
+.fld.off{opacity:.38;pointer-events:none}
 .in:focus{border-color:rgba(199,125,255,.55);box-shadow:0 0 0 3px rgba(199,125,255,.14)}
 textarea.in{height:auto;min-height:84px;padding:9px 12px;resize:vertical;line-height:1.5}
 select.in{cursor:pointer;padding-right:8px}
@@ -635,7 +636,7 @@ function familyOf(n,repo){const fm=(S.rs[repo]||{}).fmap||{};if(fm[n])return fm[
 const fam=id=>FAMILIES.find(f=>f[0]===id)||FAMILIES[9];
 function iconOf(n){for(const k in ICONS)if(n.includes(k))return ICONS[k];return "ti-sparkles"}
 const plain=s=>String(s||"").replace(/\*\*([^*]+)\*\*/g,"$1").replace(/`([^`]+)`/g,"$1").replace(/^>-?\s*/,"");
-const isReq=f=>f.type==="image"?false:f.required!==undefined?f.required:!["text","switch",undefined].includes(f.type);
+const isReq=f=>!fieldOn(f)?false:f.type==="image"?false:f.required!==undefined?f.required:!["text","switch",undefined].includes(f.type);
 const ATTACHED="the image I attach to this message";
 
 /* ---------------- load ---------------- */
@@ -784,17 +785,22 @@ async function loadForm(){const s=S.sk;if(!s)return;S.bkey=null;
   S.form={...d,fallback};$("lalias").innerHTML=d.alias?`<span class="pill mut">${esc(d.alias)}</span>`:fallback?'<span class="pill warn">no form yet · plain text</span>':"";
   if(!S.job||!d.jobs.find(j=>j.id===S.job))S.job=d.jobs[0].id;defaults();launch()}
 const curJob=()=>S.form.jobs.find(j=>j.id===S.job);
+// A field may name the job options it belongs to: when:{Job:["a","b"]}. Off fields grey out and leave the prompt.
+function fieldOn(f){const w=f&&f.when;if(!w)return true;const fs=(curJob()||{}).fields||[];
+  return Object.keys(w).every(k=>{const d=(fs.find(x=>x.id===k)||{}).default;let cur=S.v[k];if(cur==null)cur=d;
+    const want=Array.isArray(w[k])?w[k]:[w[k]];return want.includes(cur)})}
 function defaults(){for(const f of curJob().fields||[])if(S.v[f.id]==null&&f.default!=null)S.v[f.id]=f.default}
 const hasVal=v=>v!=null&&v!==""&&v!==false&&(!Array.isArray(v)||v.length);
 function fieldGroup(f){if(f.group&&GROUPS[f.group])return f.group;if(f.type==="image")return "source";if(f.type==="cast"||f.type==="style")return "cast";if(f.type==="switch")return "run";if(f.type==="one"||f.type==="many")return "story";return f.long?"notes":"input"}
-function modesNav(){const jobs=S.form.jobs,gs=S.form.groups||[],gname=id=>(gs.find(g=>g.id===id)||{}).name||"";
+function modesNav(moved){const jobs=S.form.jobs,gs=S.form.groups||[],gname=id=>(gs.find(g=>g.id===id)||{}).name||"";
   let last=null,h="";
   jobs.forEach(x=>{if(jobs.length>1&&x.group!==last&&gname(x.group)){h+=`<div class="mg">${esc(gname(x.group))}</div>`}last=x.group;
     h+=`<button class="mode${x.id===S.job?" on":""}" data-j="${esc(x.id)}" title="${esc(x.blurb||x.name)}"><span class="mi"><i class="ti ${esc(x.icon||"ti-player-play")}"></i></span><span style="min-width:0"><span class="mn">${esc(x.name)}</span>${x.blurb?`<span class="mb">${esc(x.blurb)}</span>`:""}</span></button>`});
   $("modes").innerHTML=h;
   $("modes").querySelectorAll(".mode").forEach(b=>b.onclick=()=>{if(S.job===b.dataset.j)return;S.job=b.dataset.j;S.v={};defaults();launch();if(matchMedia("(max-width:860px)").matches)b.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"})});
-  const on=$("modes").querySelector(".mode.on");if(on&&matchMedia("(max-width:860px)").matches)on.scrollIntoView({inline:"center",block:"nearest"})}
+  const on=$("modes").querySelector(".mode.on");if(moved&&on&&matchMedia("(max-width:860px)").matches)on.scrollIntoView({inline:"center",block:"nearest"})}
 function fieldHTML(f){const v=S.v[f.id],lab=f.label||f.id,opts=f.options||[],id=esc(f.id);let body;
+  if(!fieldOn(f))return `<div class="fld off" aria-disabled="true"><div class="lbl">${esc(lab)}</div><div class="help">Not used by this job.</div></div>`;
   if(f.type==="switch")return `<div class="fld"><label class="swrow"><span class="t">${esc(lab)}${f.help?`<small>${esc(f.help)}</small>`:""}</span><span class="sw"><input type="checkbox" data-sw="${id}"${v?" checked":""}><span class="tr"></span></span></label></div>`;
   else if(f.type==="text"||!f.type)body=f.long?`<textarea class="in" data-t="${id}" placeholder="${esc(f.placeholder||"")}" rows="3">${esc(v||"")}</textarea>`:`<input class="in" data-t="${id}" placeholder="${esc(f.placeholder||"")}" value="${esc(v||"")}">`;
   else if(!opts.length)body=`<div class="help" style="margin:0 0 6px">List not in GitHub yet (a PC sync adds it). Type it:</div><input class="in" data-t="${id}" value="${esc(v||"")}">`;
@@ -875,13 +881,16 @@ function renderPk(){const f=pkField();if(!f)return;const opts=f.options||[],sel=
     if(many){const a=pkSel(f);S.v[f.id]=a.includes(v)?a.filter(x=>x!==v):a.concat(v);renderPk();launch()}else{S.v[f.id]=v;closePicker();launch()}})}
 
 function valText(f){if(f.type==="image")return "";let v=S.v[f.id];if(v==null)v=f.default;if(f.type==="switch")return v?(f.label||f.id):"";if(Array.isArray(v))v=v.join(", ");return v==null?"":String(v)}
-function launch(){const j=curJob();modesNav();if(PK.f&&!pkField())closePicker();
+let LASTJOB=null;
+function launch(){const j=curJob();const SC=document.scrollingElement||document.documentElement;
+  const MOVED=LASTJOB!==j.id;const KEEPY=MOVED?null:SC.scrollTop;LASTJOB=j.id;
+  modesNav(MOVED);if(PK.f&&!pkField())closePicker();
   const fields=j.fields||[],cost=COST[j.cost];
   $("mhead").title=j.follow?"Follows "+j.follow:"";
   $("mhead").innerHTML=`<span class="mi"><i class="ti ${esc(j.icon||"ti-player-play")}"></i></span><h2>${esc(j.name)}</h2>${cost?`<span class="pill ${cost[1]} dot">${cost[0]}</span>`:""}<span class="sp"></span>
     <div class="prog" id="prog"></div>`;
-  const order=[],by={};fields.filter(f=>f.type!=="image").forEach(f=>{const g=fieldGroup(f);if(!by[g]){by[g]=[];order.push(g)}by[g].push(f)});
-  $("lform").innerHTML=order.map(g=>{const fs=by[g],gk=j.id+"|"+g,open=!S.closed.has(gk),sum=fs.map(valText).filter(Boolean).join(" · "),rq=fs.filter(isReq),ok=rq.length&&rq.every(f=>hasVal(S.v[f.id]??f.default));
+  const order=[],by={};fields.filter(f=>f.type!=="image"&&(fieldOn(f)||f.when)).forEach(f=>{const g=fieldGroup(f);if(!by[g]){by[g]=[];order.push(g)}by[g].push(f)});
+  $("lform").innerHTML=order.map(g=>{const fs=by[g],gk=j.id+"|"+g,open=!S.closed.has(gk),sum=fs.filter(fieldOn).map(valText).filter(Boolean).join(" · "),rq=fs.filter(isReq),ok=rq.length&&rq.every(f=>hasVal(S.v[f.id]??f.default));
     return `<div class="gcard${open?" open":""}${ok?" done":""}" data-g="${esc(gk)}"><button class="ch" type="button"><span class="ic"><i class="ti ${ok?"ti-check":GROUPS[g][1]}"></i></span><span class="t">${GROUPS[g][0]}</span><span class="sum">${esc(sum)}</span><i class="ti ti-chevron-right chev"></i></button><div class="cb">${fs.map(fieldHTML).join("")}</div></div>`}).join("");
   $("lform").querySelectorAll(".gcard>.ch").forEach(b=>b.onclick=()=>{const c=b.parentNode,k=c.dataset.g;c.classList.toggle("open");if(c.classList.contains("open")){S.closed.delete(k);c.classList.add("opening");setTimeout(()=>c.classList.remove("opening"),300)}else S.closed.add(k)});
   $("lform").querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>openPicker(b.dataset.pk));
@@ -892,7 +901,8 @@ function launch(){const j=curJob();modesNav();if(PK.f&&!pkField())closePicker();
   $("presets").innerHTML=ps.length?ps.map((p,i)=>`<span class="preset"><button data-p="${i}" title="Load"><i class="ti ti-star-filled"></i>${esc(p.name)}${p.job&&p.job!==S.job?` <span class="muted">· ${esc((S.form.jobs.find(x=>x.id===p.job)||{}).name||p.job)}</span>`:""}</button><button data-px="${i}" aria-label="Delete preset" title="Delete"><i class="ti ti-x" style="color:var(--tx3)"></i></button></span>`).join(""):'<span class="help" style="margin:0">None yet. Fill the settings and tap the star next to Copy.</span>';
   $("presets").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=ps[b.dataset.p];if(p.job&&S.form.jobs.find(x=>x.id===p.job))S.job=p.job;S.v={...p.v};launch();toast("Preset loaded")});
   $("presets").querySelectorAll("[data-px]").forEach(b=>b.onclick=()=>{ps.splice(b.dataset.px,1);presets[S.sk.name]=ps;store.set("sklc.presets",presets);launch()});
-  briefUI();prompt()}
+  briefUI();prompt();
+  if(KEEPY!=null&&SC.scrollTop!==KEEPY)SC.scrollTop=KEEPY}
 /* ---------------- edit brief (the text COPY gives Claude) ---------------- */
 function briefUI(){const box=$("bbox");if(S.form.fallback){box.hidden=true;return}box.hidden=false;const j=curJob(),key=S.sk.name+"|"+j.id;
   if(S.bkey!==key){S.bkey=key;$("bta").value=j.brief||"";$("bta").placeholder="No custom brief for this mode: Copy builds the prompt from the settings. Write one here to take over.";$("bmsg").textContent=""}
@@ -919,7 +929,7 @@ function profileIn(o,repo){if(!o||!o.path)return "";const p=String(o.path).repla
   for(const r of okRepos()){const f=S.rs[r.id].tree.find(x=>x.path===key||x.path.endsWith("/"+key));if(f)return (r.id===repo?"":`${r.id}/`)+f.path}return ""}
 function fillBrief(t,vals){return t.split("\n").map(l=>{let drop=false;const o=l.replace(/\{\{(\w+)\}\}/g,(m,k)=>{if(vals[k]==null||vals[k]===""){drop=true;return ""}return vals[k]});return drop?null:o}).filter(l=>l!==null).join("\n")}
 function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[],vals={skill:s.path.replace(/\/SKILL\.md$/,""),repo:`github.com/${OWNER}/${s.repo}`};const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
-  for(const x of fields){const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
+  for(const x of fields){if(!fieldOn(x))continue;const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
     if(x.type==="switch"){if(v){vals[x.id]="yes";lines.push(lab.padEnd(w)+"  yes")}continue}
     if(x.type==="image"){v=ATTACHED;vals[x.id]=v;if(x.main)v+=", main panel, keep as is";lines.push(lab.padEnd(w)+"  "+v);continue}
     if(v==null||v===""){if(isReq(x)){missing.push(lab);lines.push(lab.padEnd(w)+"  ?")}continue}
