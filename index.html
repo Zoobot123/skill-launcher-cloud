@@ -789,7 +789,11 @@ const curJob=()=>S.form.jobs.find(j=>j.id===S.job);
 function fieldOn(f){const w=f&&f.when;if(!w)return true;const fs=(curJob()||{}).fields||[];
   return Object.keys(w).every(k=>{const d=(fs.find(x=>x.id===k)||{}).default;let cur=S.v[k];if(cur==null)cur=d;
     const want=Array.isArray(w[k])?w[k]:[w[k]];return want.includes(cur)})}
-function defaults(){for(const f of curJob().fields||[])if(S.v[f.id]==null&&f.default!=null)S.v[f.id]=f.default}
+// A choice may set other fields: presets:{"<option>":{Field:value}} on that field, applied when it is picked and to its
+// default (user 2026-11-06: "each task need its own preset default": one page = solo, no blind check; a full manga = all on)
+function applyPreset(f,val){const p=f&&f.presets&&f.presets[val];if(p)for(const k of Object.keys(p))S.v[k]=p[k]}
+function defaults(){const fs=curJob().fields||[],fresh=[];for(const f of fs)if(S.v[f.id]==null&&f.default!=null){S.v[f.id]=f.default;fresh.push(f)}
+  for(const f of fresh)applyPreset(f,S.v[f.id])}
 const hasVal=v=>v!=null&&v!==""&&v!==false&&(!Array.isArray(v)||v.length);
 function fieldGroup(f){if(f.group&&GROUPS[f.group])return f.group;if(f.type==="image")return "source";if(f.type==="cast"||f.type==="style")return "cast";if(f.type==="switch")return "run";if(f.type==="one"||f.type==="many")return "story";return f.long?"notes":"input"}
 function modesNav(moved){const jobs=S.form.jobs,gs=S.form.groups||[],gname=id=>(gs.find(g=>g.id===id)||{}).name||"";
@@ -878,7 +882,7 @@ function renderPk(){const f=pkField();if(!f)return;const opts=f.options||[],sel=
   $("pkb").innerHTML=html;const os=[...$("pkb").querySelectorAll(".opt")];if(os[PK.kb])os[PK.kb].classList.add("kb");
   $("pksum").innerHTML=sel.length?"Chosen: <b style=\"color:var(--tx2)\">"+sel.map(v=>esc((opts.find(o=>o.value===v)||{label:v}).label)).join(", ")+"</b>":`${list.length} shown`;
   os.forEach(b=>b.onclick=()=>{const v=b.dataset.ov;addRecent(f,v);
-    if(many){const a=pkSel(f);S.v[f.id]=a.includes(v)?a.filter(x=>x!==v):a.concat(v);renderPk();launch()}else{S.v[f.id]=v;closePicker();launch()}})}
+    if(many){const a=pkSel(f);S.v[f.id]=a.includes(v)?a.filter(x=>x!==v):a.concat(v);renderPk();launch()}else{S.v[f.id]=v;applyPreset(f,v);closePicker();launch()}})}
 
 function valText(f){if(f.type==="image")return "";let v=S.v[f.id];if(v==null)v=f.default;if(f.type==="switch")return v?(f.on||f.label||f.id):(f.off||"");if(Array.isArray(v))v=v.join(", ");return v==null?"":String(v)}
 let LASTJOB=null;
@@ -894,9 +898,9 @@ function launch(){const j=curJob();const SC=document.scrollingElement||document.
     return `<div class="gcard${open?" open":""}${ok?" done":""}" data-g="${esc(gk)}"><button class="ch" type="button"><span class="ic"><i class="ti ${ok?"ti-check":GROUPS[g][1]}"></i></span><span class="t">${GROUPS[g][0]}</span><span class="sum">${esc(sum)}</span><i class="ti ti-chevron-right chev"></i></button><div class="cb">${fs.map(fieldHTML).join("")}</div></div>`}).join("");
   $("lform").querySelectorAll(".gcard>.ch").forEach(b=>b.onclick=()=>{const c=b.parentNode,k=c.dataset.g;c.classList.toggle("open");if(c.classList.contains("open")){S.closed.delete(k);c.classList.add("opening");setTimeout(()=>c.classList.remove("opening"),300)}else S.closed.add(k)});
   $("lform").querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>openPicker(b.dataset.pk));
-  $("lform").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const f=b.dataset.f,o=b.dataset.v;{const ff=curJob().fields.find(x=>x.id===f);if(ff&&usePicker(ff))addRecent(ff,o)}if(b.dataset.m){let a=Array.isArray(S.v[f])?S.v[f].slice():String(S.v[f]||"").split(", ").filter(Boolean);a=a.includes(o)?a.filter(z=>z!==o):a.concat(o);S.v[f]=a}else S.v[f]=S.v[f]===o&&!curJob().fields.find(x=>x.id===f).default?null:o;launch()});
+  $("lform").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const f=b.dataset.f,o=b.dataset.v;{const ff=curJob().fields.find(x=>x.id===f);if(ff&&usePicker(ff))addRecent(ff,o)}if(b.dataset.m){let a=Array.isArray(S.v[f])?S.v[f].slice():String(S.v[f]||"").split(", ").filter(Boolean);a=a.includes(o)?a.filter(z=>z!==o):a.concat(o);S.v[f]=a}else{const ff=curJob().fields.find(x=>x.id===f);S.v[f]=S.v[f]===o&&!ff.default?null:o;applyPreset(ff,S.v[f])}launch()});
   $("lform").querySelectorAll("[data-t]").forEach(b=>{b.oninput=()=>{S.v[b.dataset.t]=b.value;prompt()};b.onchange=()=>{const a=document.activeElement;launch();const n=a&&a.dataset&&a.dataset.t?$("lform").querySelector(`[data-t="${CSS.escape(a.dataset.t)}"]`):null;if(n)n.focus()}});
-  $("lform").querySelectorAll("[data-sw]").forEach(b=>b.onchange=()=>{S.v[b.dataset.sw]=b.checked||null;launch()});
+  $("lform").querySelectorAll("[data-sw]").forEach(b=>b.onchange=()=>{S.v[b.dataset.sw]=b.checked;launch()});
   const ps=presets[S.sk.name]||[];$("pcount").textContent=ps.length?`· ${ps.length}`:"";
   $("presets").innerHTML=ps.length?ps.map((p,i)=>`<span class="preset"><button data-p="${i}" title="Load"><i class="ti ti-star-filled"></i>${esc(p.name)}${p.job&&p.job!==S.job?` <span class="muted">· ${esc((S.form.jobs.find(x=>x.id===p.job)||{}).name||p.job)}</span>`:""}</button><button data-px="${i}" aria-label="Delete preset" title="Delete"><i class="ti ti-x" style="color:var(--tx3)"></i></button></span>`).join(""):'<span class="help" style="margin:0">None yet. Fill the settings and tap the star next to Copy.</span>';
   $("presets").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=ps[b.dataset.p];if(p.job&&S.form.jobs.find(x=>x.id===p.job))S.job=p.job;S.v={...p.v};launch();toast("Preset loaded")});
