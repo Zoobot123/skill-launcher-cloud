@@ -492,7 +492,7 @@ details.adv>.cb{padding:0 14px 14px}
         <details class="adv" id="bbox" hidden>
           <summary><span class="ic"><i class="ti ti-file-text"></i></span>Edit brief<span class="muted" style="font-weight:400;font-size:12px">the text COPY gives Claude</span><i class="ti ti-chevron-right chev"></i></summary>
           <div class="cb">
-            <div class="help" style="margin-top:0">Tap a name to put it in the text. A line is left out when its field is empty.</div>
+            <div class="help" style="margin-top:0">Tap a name to put it in the text. A line is left out when its field is empty. {{if Field=a|b}} ... {{else}} ... {{end}} keeps text only for those values.</div>
             <div class="chips" id="bchips" style="margin-top:8px"></div>
             <textarea class="in mono" id="bta" spellcheck="false" style="margin-top:10px;min-height:280px;font-size:12px;line-height:1.55"></textarea>
             <div class="help" id="bmsg" style="min-height:16px"></div>
@@ -910,9 +910,12 @@ function briefUI(){const box=$("bbox");if(S.form.fallback){box.hidden=true;retur
   $("bchips").querySelectorAll("[data-ph]").forEach(b=>b.onclick=()=>{const t=$("bta"),a=t.selectionStart,e=t.selectionEnd,x="{{"+b.dataset.ph+"}}";t.value=t.value.slice(0,a)+x+t.value.slice(e);t.selectionStart=t.selectionEnd=a+x.length;t.focus();t.oninput()});
   $("breset").hidden=!j.brief_default}
 function briefCheck(txt,j){const ok=new Set(["skill","repo"].concat((j.fields||[]).map(f=>f.id)));
-  const bad=[...new Set([...txt.matchAll(/\{\{(\w+)\}\}/g)].map(m=>m[1]).filter(k=>!ok.has(k)))];
+  const names=[...txt.matchAll(/\{\{(\w+)\}\}/g)].map(m=>m[1]).filter(k=>k!=="else"&&k!=="end").concat([...txt.matchAll(/\{\{if\s+(\w+)/g)].map(m=>m[1]));
+  const bad=[...new Set(names.filter(k=>!ok.has(k)))];
   if(bad.length)return "Unknown name: "+bad.map(b=>"{{"+b+"}}").join(", ");
-  if(/\{\{|\}\}/.test(txt.replace(/\{\{\w+\}\}/g,"")))return "A {{ or }} is not closed.";
+  if(/\{\{|\}\}/.test(txt.replace(/\{\{\w+\}\}/g,"").replace(/\{\{if\s[^{}]*\}\}/g,"")))return "A {{ or }} is not closed.";
+  {let d=0;for(const m of txt.matchAll(/\{\{(if\s|else\}|end\})/g)){if(m[1]==="end}")d--;else if(m[1]!=="else}")d++;else if(d<1)d=-1;if(d<0)break}
+   if(d!==0)return "Every {{if ...}} needs its {{end}} (and {{else}} sits between them).";}
   if(KEYS.test(txt))return "That text has a key in it. Remove it first.";
   if(txt.length>12000)return `The brief is ${txt.length} characters; the limit is 12000.`;return ""}
 $("bta").oninput=()=>{const j=curJob(),txt=$("bta").value;j.brief=txt;const e=briefCheck(txt,j);$("bmsg").textContent=e;$("bmsg").style.color=e?"var(--bad)":"";prompt()};
@@ -927,7 +930,22 @@ $("bsave").onclick=()=>busy($("bsave"),async()=>{const s=S.sk,jid=S.job,txt=$("b
 // The cast's profile goes in the brief only when the file is in GitHub; stock.json paths are PC paths a cloud session cannot open (user 2026-11-04)
 function profileIn(o,repo){if(!o||!o.path)return "";const p=String(o.path).replace(/\\/g,"/"),m=p.match(/[^/]+\/profiles\/[^/]+$/),key=m?m[0]:p.split("/").pop();
   for(const r of okRepos()){const f=S.rs[r.id].tree.find(x=>x.path===key||x.path.endsWith("/"+key));if(f)return (r.id===repo?"":`${r.id}/`)+f.path}return ""}
-function fillBrief(t,vals){return t.split("\n").map(l=>{let drop=false;const o=l.replace(/\{\{(\w+)\}\}/g,(m,k)=>{if(vals[k]==null||vals[k]===""){drop=true;return ""}return vals[k]});return drop?null:o}).filter(l=>l!==null).join("\n")}
+// {{if Field=a|b}} ... {{else}} ... {{end}} (also Field!=a, or {{if Field}} = has a value): the text between stays only when
+// the field's value matches, so a trigger carries only the branch the form picked (user 2026-11-06: "solo mode should not
+// mention sub agent and blind check at all"). A tag alone on its line takes its line with it.
+const IFTAG=/(\{\{(?:if\s[^{}]*|else|end)\}\})/;
+function condOn(c,cv){const m=c.trim().match(/^(\w+)\s*(!?=)\s*(.*)$/);if(!m){const v=cv[c.trim()];return v!=null&&v!==""}
+  const v=cv[m[1]],hit=v!=null&&m[3].split("|").map(s=>s.trim()).includes(String(v));return m[2]==="="?hit:!hit}
+function applyIfs(t,cv){const parts=t.replace(/^[ \t]*(\{\{(?:if\s[^{}]*|else|end)\}\})[ \t]*(?:\n|$)/gm,"$1").split(IFTAG),st=[];let out="";
+  const on=()=>st.length?st[st.length-1].on:true;
+  for(const p of parts){let m;if((m=p.match(/^\{\{if\s([^{}]*)\}\}$/))){const par=on(),c=condOn(m[1],cv);st.push({par,c,on:par&&c})}
+    else if(p==="{{else}}"){const s=st[st.length-1];if(s)s.on=s.par&&!s.c}else if(p==="{{end}}")st.pop();else if(on())out+=p}
+  return out}
+// the value each field has for a condition: a switch reads its on/off text, a field the job does not use has none
+function condVals(fields){const cv={};for(const x of fields){if(!fieldOn(x))continue;let v=S.v[x.id];if(v==null)v=x.default;
+    if(x.type==="switch")cv[x.id]=v?(x.on||"yes"):(x.off||"no");else if(Array.isArray(v))cv[x.id]=v.join(", ");else if(v!=null&&v!=="")cv[x.id]=String(v)}
+  return cv}
+function fillBrief(t,vals,cv){if(cv)t=applyIfs(t,cv);return t.split("\n").map(l=>{let drop=false;const o=l.replace(/\{\{(\w+)\}\}/g,(m,k)=>{if(vals[k]==null||vals[k]===""){drop=true;return ""}return vals[k]});return drop?null:o}).filter(l=>l!==null).join("\n")}
 function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[],vals={skill:s.path.replace(/\/SKILL\.md$/,""),repo:`github.com/${OWNER}/${s.repo}`};const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
   for(const x of fields){if(!fieldOn(x))continue;const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
     if(x.type==="switch"){const sw=v?(x.on||"yes"):x.off;if(sw){vals[x.id]=sw;lines.push(lab.padEnd(w)+"  "+sw)}continue}
@@ -936,8 +954,8 @@ function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[
     v=String(v);vals[x.id]=v;if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=profileIn(o,s.repo);v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"");vals[x.id]=v}else if(x.type==="style"&&v===OFFICIAL){v="official art style, the same as the character's own series: search for it";vals[x.id]=v}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
     lines.push(lab.padEnd(w)+"  "+v)}
   let head=`Use the ${s.name} skill (read ${s.path} in github.com/${OWNER}/${s.repo} first).`;if(!S.form.fallback){head+=` Job: ${j.name.toLowerCase()}.`;if(j.follow)head+=`\nFollow ${j.follow}.`}
-  let tail=j.tail||"";if(!S.form.fallback&&fields.some(x=>x.type!=="text"))tail=(tail?tail+" ":"")+"All inputs are answered: do not ask for them again.";
-  const text=j.brief&&!S.form.fallback?fillBrief(j.brief,vals):head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
+  const cv=condVals(fields);let tail=fillBrief(j.tail||"",{},cv);if(!S.form.fallback&&fields.some(x=>x.type!=="text"))tail=(tail?tail+" ":"")+"All inputs are answered: do not ask for them again.";
+  const text=j.brief&&!S.form.fallback?fillBrief(j.brief,vals,cv):head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
   $("out").innerHTML=esc(text).replace(/(\S.*?)  \?$/gm,'<span class="miss">$1  ?</span>');const tk=Math.round(text.length/4)+" tk";$("tk").textContent=tk;$("peekTk").textContent="· "+tk;
   const bits=[`<b>${esc(j.name)}</b>`].concat(fields.filter(f=>f.type!=="text"||!f.long).map(valText).filter(Boolean).slice(0,4).map(esc));
   $("sumline").innerHTML=bits.join(" · ")+(missing.length?` · <span class="bad">needs ${esc(missing.join(", "))}</span>`:"");
