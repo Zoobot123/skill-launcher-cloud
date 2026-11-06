@@ -880,7 +880,7 @@ function renderPk(){const f=pkField();if(!f)return;const opts=f.options||[],sel=
   os.forEach(b=>b.onclick=()=>{const v=b.dataset.ov;addRecent(f,v);
     if(many){const a=pkSel(f);S.v[f.id]=a.includes(v)?a.filter(x=>x!==v):a.concat(v);renderPk();launch()}else{S.v[f.id]=v;closePicker();launch()}})}
 
-function valText(f){if(f.type==="image")return "";let v=S.v[f.id];if(v==null)v=f.default;if(f.type==="switch")return v?(f.label||f.id):"";if(Array.isArray(v))v=v.join(", ");return v==null?"":String(v)}
+function valText(f){if(f.type==="image")return "";let v=S.v[f.id];if(v==null)v=f.default;if(f.type==="switch")return v?(f.on||f.label||f.id):(f.off||"");if(Array.isArray(v))v=v.join(", ");return v==null?"":String(v)}
 let LASTJOB=null;
 function launch(){const j=curJob();const SC=document.scrollingElement||document.documentElement;
   const MOVED=LASTJOB!==j.id;const KEEPY=MOVED?null:SC.scrollTop;LASTJOB=j.id;
@@ -930,7 +930,7 @@ function profileIn(o,repo){if(!o||!o.path)return "";const p=String(o.path).repla
 function fillBrief(t,vals){return t.split("\n").map(l=>{let drop=false;const o=l.replace(/\{\{(\w+)\}\}/g,(m,k)=>{if(vals[k]==null||vals[k]===""){drop=true;return ""}return vals[k]});return drop?null:o}).filter(l=>l!==null).join("\n")}
 function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[],vals={skill:s.path.replace(/\/SKILL\.md$/,""),repo:`github.com/${OWNER}/${s.repo}`};const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
   for(const x of fields){if(!fieldOn(x))continue;const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
-    if(x.type==="switch"){if(v){vals[x.id]="yes";lines.push(lab.padEnd(w)+"  yes")}continue}
+    if(x.type==="switch"){const sw=v?(x.on||"yes"):x.off;if(sw){vals[x.id]=sw;lines.push(lab.padEnd(w)+"  "+sw)}continue}
     if(x.type==="image"){v=ATTACHED;vals[x.id]=v;if(x.main)v+=", main panel, keep as is";lines.push(lab.padEnd(w)+"  "+v);continue}
     if(v==null||v===""){if(isReq(x)){missing.push(lab);lines.push(lab.padEnd(w)+"  ?")}continue}
     v=String(v);vals[x.id]=v;if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=profileIn(o,s.repo);v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"");vals[x.id]=v}else if(x.type==="style"&&v===OFFICIAL){v="official art style, the same as the character's own series: search for it";vals[x.id]=v}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
