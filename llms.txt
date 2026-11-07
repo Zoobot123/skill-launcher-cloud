@@ -36,5 +36,5 @@ gh api repos/Zoobot123/<repo>/contents/skills/<skill>/SKILL.md
 - A NovelAI skill goes in manga-skills; any other skill goes in claude-skills. To move one, move the whole folder
   (same skills/ or library/ place), remove it from the old repo, and add the pending.json entry when the old repo is manga-skills.
 - Trigger phrases live in the SKILL.md description: "Trigger on 'a', 'b'. Not for: c."
-- Removing a skill needs the user's yes. Never commit a key or token. Every cast field says "Name, 18+ version".
+- Removing a skill needs the user's yes. Never commit a key or token. A cast reads "Name, 18+ version" unless the job has an 18+ switch (a switch field with "adult": true) turned off; then the trigger does not mention 18+ at all (wrap such text in the brief in {{if Adult=on}} ... {{end}}).
 - With the PC on, use Skill Launcher instead: http://127.0.0.1:4340/llms.txt

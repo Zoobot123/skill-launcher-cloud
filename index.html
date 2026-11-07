@@ -786,6 +786,10 @@ async function loadForm(){const s=S.sk;if(!s)return;S.bkey=null;
   if(!S.job||!d.jobs.find(j=>j.id===S.job))S.job=d.jobs[0].id;defaults();launch()}
 const curJob=()=>S.form.jobs.find(j=>j.id===S.job);
 // A field may name the job options it belongs to: when:{Job:["a","b"]}. Off fields grey out and leave the prompt.
+// The 18+ switch (a switch field with "adult": true, user 2026-11-07): on, a cast reads "Name, 18+ version"; off, the
+// trigger does not mention it at all. A job without one keeps "18+ version" on every cast, as before.
+function adultOn(fields){const a=(fields||(curJob()||{}).fields||[]).find(x=>x.adult);if(!a)return true;if(!fieldOn(a))return false;
+  const v=S.v[a.id];return !!(v==null?a.default:v)}
 function fieldOn(f){const w=f&&f.when;if(!w)return true;const fs=(curJob()||{}).fields||[];
   return Object.keys(w).every(k=>{const d=(fs.find(x=>x.id===k)||{}).default;let cur=S.v[k];if(cur==null)cur=d;
     const want=Array.isArray(w[k])?w[k]:[w[k]];return want.includes(cur)})}
@@ -814,7 +818,7 @@ function fieldHTML(f){const v=S.v[f.id],lab=f.label||f.id,opts=f.options||[],id=
     else if(short)body=`<div class="seg">${opts.map(o=>`<button class="${sel.includes(o.value)?"on":""}" data-f="${id}" data-v="${esc(o.value)}" title="${esc(o.note||o.label)}">${esc(o.label)}</button>`).join("")}</div>`;
     else if(f.type==="style")body=`<div class="stl">${opts.map(o=>`<button class="chip${sel.includes(o.value)?" on":""}" data-f="${id}" data-v="${esc(o.value)}" title="${esc(o.note||"")}"><span>${esc(o.label)}</span>${o.note?`<small>${esc(o.note)}</small>`:""}</button>`).join("")}</div>`;
     else body=`<div class="chips">${opts.map((o,k)=>`<button class="chip${f.type==="cast"?" castc":""}${sel.includes(o.value)?" on":""}" data-f="${id}" data-v="${esc(o.value)}" data-m="${many?1:""}" title="${esc(o.note||"")}">${f.type==="cast"?`<span class="av" style="background:${CASTCOL[k%CASTCOL.length]}">${esc(String(o.label)[0]||"?")}</span>`:""}${esc(o.label)}${f.type==="cast"&&o.v2?'<span class="mono muted" style="font-size:10px">v2</span>':""}</button>`).join("")}</div>`}
-  return `<div class="fld"><div class="lbl">${isReq(f)?(hasVal(v)?'<i class="ti ti-circle-check-filled done"></i>':'<span class="req" title="Needed"></span>'):""}${esc(lab)}${f.type==="cast"?'<span class="muted" style="font-weight:400">· 18+ version</span>':""}</div>${body}${f.help?`<div class="help">${esc(f.help)}</div>`:""}</div>`}
+  return `<div class="fld"><div class="lbl">${isReq(f)?(hasVal(v)?'<i class="ti ti-circle-check-filled done"></i>':'<span class="req" title="Needed"></span>'):""}${esc(lab)}${f.type==="cast"&&adultOn()?'<span class="muted" style="font-weight:400">· 18+ version</span>':""}</div>${body}${f.help?`<div class="help">${esc(f.help)}</div>`:""}</div>`}
 /* ---------------- picker: cast, style and any long list ---------------- */
 const usePicker=f=>f.type==="cast"||f.type==="style"||((f.type==="one"||f.type==="many")&&(!!f.source||(f.options||[]).length>8));
 const srcKey=f=>f.source||{cast:"profiles",style:"styles"}[f.type]||(S.sk.name+":"+f.id);
@@ -848,7 +852,7 @@ function pkField(){return (curJob().fields||[]).find(x=>x.id===PK.f)}
 function pkSel(f){const v=S.v[f.id]??f.default;return f.type==="many"?(Array.isArray(v)?v:String(v||"").split(", ").filter(Boolean)):(v==null?[]:[v])}
 function openPicker(fid){PK.f=fid;PK.q="";PK.g="";PK.kb=0;const f=pkField(),many=f.type==="many",title=f.type==="cast"?"Pick a character":f.type==="style"?"Pick an art style":"Pick "+(f.label||f.id).toLowerCase();
   $("pk").className="pk"+(f.type==="style"||f.options.some(o=>o.note&&o.note.length>30)?" wide":"");
-  $("pk").innerHTML=`<div class="pkh"><div class="ttl"><h3>${esc(title)}${f.type==="cast"?' <span class="muted" style="font-weight:400;font-size:12.5px">· 18+ versions</span>':""}</h3><span class="n">${f.options.length}</span><button class="ib" id="pkx" aria-label="Close"><i class="ti ti-x"></i></button></div>
+  $("pk").innerHTML=`<div class="pkh"><div class="ttl"><h3>${esc(title)}${f.type==="cast"&&adultOn()?' <span class="muted" style="font-weight:400;font-size:12.5px">· 18+ versions</span>':""}</h3><span class="n">${f.options.length}</span><button class="ib" id="pkx" aria-label="Close"><i class="ti ti-x"></i></button></div>
     <div class="search"><i class="ti ti-search"></i><input class="in" id="pkq" placeholder="${f.type==="cast"?"Search or type a name, e.g. Nami from One Piece":"Search "+(f.type==="style"?"styles, notes":"the list")+"…"}" autocomplete="off"></div><div class="pkf" id="pkf"></div></div>
     <div class="pkb" id="pkb"></div>
     <div class="pkft"><span class="sumx" id="pksum"></span><button class="btn ghost" id="pkclr"><i class="ti ti-eraser"></i>Clear</button>${many?'<button class="btn pri" id="pkdone">Done</button>':""}</div>`;
@@ -884,7 +888,7 @@ function renderPk(){const f=pkField();if(!f)return;const opts=f.options||[],sel=
   os.forEach(b=>b.onclick=()=>{const v=b.dataset.ov;addRecent(f,v);
     if(many){const a=pkSel(f);S.v[f.id]=a.includes(v)?a.filter(x=>x!==v):a.concat(v);renderPk();launch()}else{S.v[f.id]=v;applyPreset(f,v);closePicker();launch()}})}
 
-function valText(f){if(f.type==="image")return "";let v=S.v[f.id];if(v==null)v=f.default;if(f.type==="switch")return v?(f.on||f.label||f.id):(f.off||"");if(Array.isArray(v))v=v.join(", ");return v==null?"":String(v)}
+function valText(f){if(f.type==="image")return "";let v=S.v[f.id];if(v==null)v=f.default;if(f.type==="switch")return v?(f.adult?(f.label||f.id):(f.on||f.label||f.id)):(f.off||"");if(Array.isArray(v))v=v.join(", ");return v==null?"":String(v)}
 let LASTJOB=null;
 function launch(){const j=curJob();const SC=document.scrollingElement||document.documentElement;
   const MOVED=LASTJOB!==j.id;const KEEPY=MOVED?null:SC.scrollTop;LASTJOB=j.id;
@@ -956,10 +960,10 @@ function condVals(fields){const cv={};for(const x of fields){if(!fieldOn(x))cont
 function fillBrief(t,vals,cv){if(cv)t=applyIfs(t,cv);return t.split("\n").map(l=>{let drop=false;const o=l.replace(/\{\{(\w+)\}\}/g,(m,k)=>{if(vals[k]==null||vals[k]===""){drop=true;return ""}return vals[k]});return drop?null:o}).filter(l=>l!==null).join("\n")}
 function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[],vals={skill:s.path.replace(/\/SKILL\.md$/,""),repo:`github.com/${OWNER}/${s.repo}`};const w=Math.max(5,...fields.map(x=>(x.label||x.id).length));
   for(const x of fields){if(!fieldOn(x))continue;const lab=x.label||x.id;let v=S.v[x.id];if(v==null)v=x.default;if(Array.isArray(v))v=v.join(", ");
-    if(x.type==="switch"){const sw=v?(x.on||"yes"):x.off;if(sw){vals[x.id]=sw;lines.push(lab.padEnd(w)+"  "+sw)}continue}
+    if(x.type==="switch"){const sw=v?(x.say||x.on||"yes"):x.off;if(sw){vals[x.id]=sw;lines.push(lab.padEnd(w)+"  "+sw)}continue}
     if(x.type==="image"){v=ATTACHED;vals[x.id]=v;if(x.main)v+=", main panel, keep as is";lines.push(lab.padEnd(w)+"  "+v);continue}
     if(v==null||v===""){if(isReq(x)){missing.push(lab);lines.push(lab.padEnd(w)+"  ?")}continue}
-    v=String(v);vals[x.id]=v;if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=profileIn(o,s.repo);v=`${v}, 18+ version`+(pf?` (profile ${pf})`:"");vals[x.id]=v}else if(x.type==="style"&&v===OFFICIAL){v="official art style, the same as the character's own series: search for it";vals[x.id]=v}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
+    v=String(v);vals[x.id]=v;if(x.type==="cast"){const o=(x.options||[]).find(o=>o.value===v);const pf=profileIn(o,s.repo);v=v+(adultOn(fields)?", 18+ version":"")+(pf?` (profile ${pf})`:"");vals[x.id]=v}else if(x.type==="style"&&v===OFFICIAL){v="official art style, the same as the character's own series: search for it";vals[x.id]=v}else if(x.type==="image"&&x.main)v+=", main panel, keep as is";
     lines.push(lab.padEnd(w)+"  "+v)}
   let head=`Use the ${s.name} skill (read ${s.path} in github.com/${OWNER}/${s.repo} first).`;if(!S.form.fallback){head+=` Job: ${j.name.toLowerCase()}.`;if(j.follow)head+=`\nFollow ${j.follow}.`}
   const cv=condVals(fields);let tail=fillBrief(j.tail||"",{},cv);if(!S.form.fallback&&fields.some(x=>x.type!=="text"))tail=(tail?tail+" ":"")+"All inputs are answered: do not ask for them again.";
