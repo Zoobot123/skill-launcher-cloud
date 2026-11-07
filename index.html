@@ -492,7 +492,7 @@ details.adv>.cb{padding:0 14px 14px}
         <details class="adv" id="bbox" hidden>
           <summary><span class="ic"><i class="ti ti-file-text"></i></span>Edit brief<span class="muted" style="font-weight:400;font-size:12px">the text COPY gives Claude</span><i class="ti ti-chevron-right chev"></i></summary>
           <div class="cb">
-            <div class="help" style="margin-top:0">Tap a name to put it in the text. A line is left out when its field is empty. {{if Field=a|b}} ... {{else}} ... {{end}} keeps text only for those values.</div>
+            <div class="help" style="margin-top:0">Tap a name to put it in the text. A line is left out when its field is empty. {{if Field=a|b}} ... {{else}} ... {{end}} keeps text only for those values; {{if Field~=a|b}} for a multi-pick field: a or b is among the picks (!~= none of them).</div>
             <div class="chips" id="bchips" style="margin-top:8px"></div>
             <textarea class="in mono" id="bta" spellcheck="false" style="margin-top:10px;min-height:280px;font-size:12px;line-height:1.55"></textarea>
             <div class="help" id="bmsg" style="min-height:16px"></div>
@@ -934,12 +934,16 @@ $("bsave").onclick=()=>busy($("bsave"),async()=>{const s=S.sk,jid=S.job,txt=$("b
 // The cast's profile goes in the brief only when the file is in GitHub; stock.json paths are PC paths a cloud session cannot open (user 2026-11-04)
 function profileIn(o,repo){if(!o||!o.path)return "";const p=String(o.path).replace(/\\/g,"/"),m=p.match(/[^/]+\/profiles\/[^/]+$/),key=m?m[0]:p.split("/").pop();
   for(const r of okRepos()){const f=S.rs[r.id].tree.find(x=>x.path===key||x.path.endsWith("/"+key));if(f)return (r.id===repo?"":`${r.id}/`)+f.path}return ""}
-// {{if Field=a|b}} ... {{else}} ... {{end}} (also Field!=a, or {{if Field}} = has a value): the text between stays only when
+// {{if Field=a|b}} ... {{else}} ... {{end}} (also Field!=a, Field~=a|b / Field!~=a|b for a many field, or {{if Field}} = has a value): the text between stays only when
 // the field's value matches, so a trigger carries only the branch the form picked (user 2026-11-06: "solo mode should not
 // mention sub agent and blind check at all"). A tag alone on its line takes its line with it.
 const IFTAG=/(\{\{(?:if\s[^{}]*|else|end)\}\})/;
-function condOn(c,cv){const m=c.trim().match(/^(\w+)\s*(!?=)\s*(.*)$/);if(!m){const v=cv[c.trim()];return v!=null&&v!==""}
-  const v=cv[m[1]],hit=v!=null&&m[3].split("|").map(s=>s.trim()).includes(String(v));return m[2]==="="?hit:!hit}
+// Field~=a|b: a many-choice field holds a OR b among its picks (Field!~=a|b: holds none of them), so one brief can carry a
+// block per picked option (user 2026-11-07: "update html so it support different mode and trigger promt")
+function condOn(c,cv){const m=c.trim().match(/^(\w+)\s*(!?~?=)\s*(.*)$/);if(!m){const v=cv[c.trim()];return v!=null&&v!==""}
+  const v=cv[m[1]],want=m[3].split("|").map(s=>s.trim()),op=m[2];
+  if(op.includes("~")){const have=v==null||v===""?[]:String(v).split(", ").map(s=>s.trim());const any=want.some(w=>have.includes(w));return op==="~="?any:!any}
+  const hit=v!=null&&want.includes(String(v));return op==="="?hit:!hit}
 function applyIfs(t,cv){const parts=t.replace(/^[ \t]*(\{\{(?:if\s[^{}]*|else|end)\}\})[ \t]*(?:\n|$)/gm,"$1").split(IFTAG),st=[];let out="";
   const on=()=>st.length?st[st.length-1].on:true;
   for(const p of parts){let m;if((m=p.match(/^\{\{if\s([^{}]*)\}\}$/))){const par=on(),c=condOn(m[1],cv);st.push({par,c,on:par&&c})}

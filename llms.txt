@@ -18,7 +18,9 @@ gh api repos/Zoobot123/<repo>/contents/skills/<skill>/SKILL.md
 ## Layout (the same in both repos)
 - skills/<name>/    loaded skills (skills/README.md lists them).
 - library/<name>/   stored skills, never loaded (library/README.md in claude-skills; skills/README.md in manga-skills).
-- <name>/launcher.json   the skill's form: jobs, fields, prompt tail.
+- <name>/launcher.json   the skill's form: jobs, fields, prompt tail; a job's "brief" is the whole trigger: {{Field}} (a line whose field
+  is empty is dropped), {{if Field=a|b}} ... {{else}} ... {{end}}, Field!=a, and for a multi-pick field Field~=a|b (a or b among
+  the picks) / Field!~=a|b. Check and render with claude-skills skills/skiller-creator-enhanced/scripts/check_skill.py.
 - <name>/reference/tag_filter.txt, tag_filter_negative.txt   optional: the skill then gets a Filter tab. Tags that never reach NovelAI, one per line.
 - .skill-launcher/families.json   the user's category choices {skill: family}.
 - .skill-launcher/stock.json      dropdown lists, written by the PC sync (manga-skills).
