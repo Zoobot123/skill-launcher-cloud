@@ -794,7 +794,7 @@ function fieldOn(f){const w=f&&f.when;if(!w)return true;const fs=(curJob()||{}).
   return Object.keys(w).every(k=>{const d=(fs.find(x=>x.id===k)||{}).default;let cur=S.v[k];if(cur==null)cur=d;
     const want=Array.isArray(w[k])?w[k]:[w[k]];return want.includes(cur)})}
 // A choice may set other fields: presets:{"<option>":{Field:value}} on that field, applied when it is picked and to its
-// default (user 2026-11-06: "each task need its own preset default": one page = solo, no blind check; a full manga = all on)
+// default (user 2026-11-06: "each task need its own preset default"; since 2026-11-09 every NovelAI job starts solo with the blind check on)
 function applyPreset(f,val){const p=f&&f.presets&&f.presets[val];if(p)for(const k of Object.keys(p))S.v[k]=p[k]}
 function defaults(){const fs=curJob().fields||[],fresh=[];for(const f of fs)if(S.v[f.id]==null&&f.default!=null){S.v[f.id]=f.default;fresh.push(f)}
   for(const f of fresh)applyPreset(f,S.v[f.id])}
@@ -939,8 +939,8 @@ $("bsave").onclick=()=>busy($("bsave"),async()=>{const s=S.sk,jid=S.job,txt=$("b
 function profileIn(o,repo){if(!o||!o.path)return "";const p=String(o.path).replace(/\\/g,"/"),m=p.match(/[^/]+\/profiles\/[^/]+$/),key=m?m[0]:p.split("/").pop();
   for(const r of okRepos()){const f=S.rs[r.id].tree.find(x=>x.path===key||x.path.endsWith("/"+key));if(f)return (r.id===repo?"":`${r.id}/`)+f.path}return ""}
 // {{if Field=a|b}} ... {{else}} ... {{end}} (also Field!=a, Field~=a|b / Field!~=a|b for a many field, or {{if Field}} = has a value): the text between stays only when
-// the field's value matches, so a trigger carries only the branch the form picked (user 2026-11-06: "solo mode should not
-// mention sub agent and blind check at all"). A tag alone on its line takes its line with it.
+// the field's value matches, so a trigger carries only the branch the form picked (user 2026-11-06; since 2026-11-09 solo
+// names only its two helper agents, the summarizer and the blind check). A tag alone on its line takes its line with it.
 const IFTAG=/(\{\{(?:if\s[^{}]*|else|end)\}\})/;
 // Field~=a|b: a many-choice field holds a OR b among its picks (Field!~=a|b: holds none of them), so one brief can carry a
 // block per picked option (user 2026-11-07: "update html so it support different mode and trigger promt")
