@@ -935,9 +935,10 @@ $("bsave").onclick=()=>busy($("bsave"),async()=>{const s=S.sk,jid=S.job,txt=$("b
   const d=JSON.parse(await readText(e.sha,s.repo)),j=(d.jobs||[]).find(x=>x.id===jid);if(!j)throw new Error("This job is not in launcher.json any more. Reload.");
   if(txt.trim()){if(j.brief&&j.brief_default==null)j.brief_default=j.brief;j.brief=txt}else delete j.brief;
   await commit([{path,content:JSON.stringify(d,null,1)+"\n"}],`${s.name}: brief of ${jid} (cloud)`,s.repo);toast("Brief saved to GitHub");await loadAll()});
-// The cast's profile goes in the brief only when the file is in GitHub; stock.json paths are PC paths a cloud session cannot open (user 2026-11-04)
+// The cast's profile: the GitHub copy when there is one, else the PC path from stock.json. Since 2026-11-09 every job runs on
+// the PC (user: "move away from github and drive, switch back to local"), so a PC path opens there (it was dropped before).
 function profileIn(o,repo){if(!o||!o.path)return "";const p=String(o.path).replace(/\\/g,"/"),m=p.match(/[^/]+\/profiles\/[^/]+$/),key=m?m[0]:p.split("/").pop();
-  for(const r of okRepos()){const f=S.rs[r.id].tree.find(x=>x.path===key||x.path.endsWith("/"+key));if(f)return (r.id===repo?"":`${r.id}/`)+f.path}return ""}
+  for(const r of okRepos()){const f=S.rs[r.id].tree.find(x=>x.path===key||x.path.endsWith("/"+key));if(f)return (r.id===repo?"":`${r.id}/`)+f.path}return String(o.path)}
 // {{if Field=a|b}} ... {{else}} ... {{end}} (also Field!=a, Field~=a|b / Field!~=a|b for a many field, or {{if Field}} = has a value): the text between stays only when
 // the field's value matches, so a trigger carries only the branch the form picked (user 2026-11-06; since 2026-11-09 solo
 // names only its two helper agents, the summarizer and the blind check). A tag alone on its line takes its line with it.
