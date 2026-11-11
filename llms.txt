@@ -29,6 +29,10 @@ gh api repos/Zoobot123/<repo>/contents/skills/<skill>/SKILL.md
 - <name>/launcher.json   the skill's form: jobs, fields, prompt tail; a job's "brief" is the whole trigger: {{Field}} (a line whose field
   is empty is dropped), {{if Field=a|b}} ... {{else}} ... {{end}}, Field!=a, and for a multi-pick field Field~=a|b (a or b among
   the picks) / Field!~=a|b. Check and render with claude-skills skills/skiller-creator-enhanced/scripts/check_skill.py.
+- A job may have several Copy buttons (user 2026-11-11): `"buttons": [{"id", "label", "icon", "brief", "needs"?}, ...]`.
+  Each button copies its own brief, filled from the same form ({{Field}}, {{if}} as in `brief`); `needs` lists the field
+  ids that button requires (default: every required field). Keep `brief` = the first button's brief (older pages and
+  check_skill.py read it). Example: manga-skills skills/manga-redesign-solo (Copy 1: Plan, Copy 2: Draw).
 - <name>/reference/tag_filter.txt, tag_filter_negative.txt   optional: the skill then gets a Filter tab. Tags that never reach NovelAI, one per line.
 - .skill-launcher/families.json   the user's category choices {skill: family}.
 - .skill-launcher/stock.json      dropdown lists, written by the PC sync (manga-skills).

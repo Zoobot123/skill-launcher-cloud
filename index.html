@@ -266,7 +266,7 @@ body.scrolldown .bar{gap:0}
 .go:active{transform:scale(.985)}
 .go i{font-size:18px}
 .go kbd{font:500 10.5px var(--mono);padding:3px 6px;border-radius:6px;background:rgba(0,0,0,.18);color:rgba(255,255,255,.85)}
-.go.wait{background:var(--s3);box-shadow:none;color:var(--tx2)}
+.go.wait{background:var(--s3);box-shadow:none;color:var(--tx2)} .gos{display:contents} .gos .go{min-width:0;font-size:13.5px} .gos .go:not(.on):not(.wait){opacity:.72} .gos .go.on{outline:2px solid rgba(255,255,255,.55);outline-offset:-2px}
 .dock .ib{width:46px;height:46px;border-radius:13px}
 .hint{font-size:12px;text-align:center;margin-top:8px;min-height:16px;color:var(--tx3)}
 .presets{display:flex;flex-wrap:wrap;gap:6px}
@@ -509,7 +509,7 @@ details.adv>.cb{padding:0 14px 14px}
         <div class="dock">
           <div class="sumline" id="sumline"></div>
           <div class="row">
-            <button class="go" id="go" title="Copies the prompt"><i class="ti ti-copy"></i><span>Copy prompt</span><kbd>Ctrl ↵</kbd></button>
+            <span class="gos" id="gos"></span><button class="go" id="go" title="Copies the prompt"><i class="ti ti-copy"></i><span>Copy prompt</span><kbd>Ctrl ↵</kbd></button>
             <button class="ib" id="save" aria-label="Save preset" title="Save as preset"><i class="ti ti-star"></i></button>
           </div>
           <div class="hint" id="hint"></div>
@@ -992,17 +992,27 @@ function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[
     lines.push(lab.padEnd(w)+"  "+v)}
   let head=`Use the ${s.name} skill (read ${s.path} in github.com/${OWNER}/${s.repo} first).`;if(!S.form.fallback){head+=` Job: ${j.name.toLowerCase()}.`;if(j.follow)head+=`\nFollow ${j.follow}.`}
   const cv=condVals(fields);let tail=fillBrief(j.tail||"",{},cv);if(!S.form.fallback&&fields.some(x=>x.type!=="text"))tail=(tail?tail+" ":"")+"All inputs are answered: do not ask for them again.";
-  const text=j.brief&&!S.form.fallback?fillBrief(j.brief,vals,cv):head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
+  // several Copy buttons (launcher.json `buttons`): each fills its own brief from the same form (user, 2026-11-11)
+  const btns=!S.form.fallback&&Array.isArray(j.buttons)&&j.buttons.length?j.buttons:null;let text;
+  if(btns){S.btn=Math.min(S.btn||0,btns.length-1);const texts=btns.map(b=>fillBrief(b.brief||"",vals,cv));
+    const lab=id=>{const f=fields.find(x=>x.id===id);return f?(f.label||f.id):id};
+    const misses=btns.map(b=>Array.isArray(b.needs)?b.needs.filter(id=>{const f=fields.find(x=>x.id===id);return f&&fieldOn(f)&&(vals[id]==null||vals[id]==="")}).map(lab):missing);
+    text=texts[S.btn];S.prompt={text,texts,misses,missing:misses[S.btn]};
+    $("go").hidden=true;$("gos").innerHTML=btns.map((b,i)=>`<button class="go${i===S.btn?" on":""}${misses[i].length?" wait":""}" data-b="${i}" title="Copies this prompt"><i class="ti ${esc(b.icon||"ti-copy")}"></i><span>${esc(b.label||"Copy "+(i+1))}</span></button>`).join("");
+    $("gos").querySelectorAll("[data-b]").forEach(el=>el.onclick=()=>copyPrompt(+el.dataset.b));
+    $("outc").querySelector(".oh b").textContent="Claude gets: "+(btns[S.btn].label||"");}
+  else{text=j.brief&&!S.form.fallback?fillBrief(j.brief,vals,cv):head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
+    $("go").hidden=false;$("gos").innerHTML="";$("outc").querySelector(".oh b").textContent="Claude gets";}
   $("out").innerHTML=esc(text).replace(/(\S.*?)  \?$/gm,'<span class="miss">$1  ?</span>');const tk=Math.round(text.length/4)+" tk";$("tk").textContent=tk;$("peekTk").textContent="· "+tk;
   const bits=[`<b>${esc(j.name)}</b>`].concat(fields.filter(f=>f.type!=="text"||!f.long).map(valText).filter(Boolean).slice(0,4).map(esc));
   $("sumline").innerHTML=bits.join(" · ")+(missing.length?` · <span class="bad">needs ${esc(missing.join(", "))}</span>`:"");
-  $("go").classList.toggle("wait",!!missing.length);$("hint").textContent="";
+  $("go").classList.toggle("wait",!!missing.length);if(!S.keepHint)$("hint").textContent="";S.keepHint=false;
   const need=fields.filter(isReq),got=need.length-missing.length,pc=need.length?Math.round(got/need.length*100):100;
   $("prog").innerHTML=need.length?`<div class="ring${got===need.length?" full":""}" style="--p:${pc}" title="${got} of ${need.length} needed settings"><span>${got===need.length?'<i class="ti ti-check" style="color:var(--ok)"></i>':got+"/"+need.length}</span></div>`:""}
 $("peek").onclick=()=>{S.open=!S.open;$("stage").classList.toggle("open",S.open);$("peekChev").className="ti ti-chevron-"+(S.open?"down":"up")};
-async function copyPrompt(){const p=S.prompt;if(!p)return;if(p.missing.length){$("hint").textContent="Fill "+p.missing.join(", ");$("hint").style.color="var(--acc)";return}
+async function copyPrompt(i){if(typeof i==="number"&&S.prompt&&S.prompt.texts){S.btn=i;S.keepHint=true;prompt()}const p=S.prompt;if(!p)return;if(p.missing.length){$("hint").textContent="Fill "+p.missing.join(", ");$("hint").style.color="var(--acc)";return}
   try{await navigator.clipboard.writeText(p.text);toast("Prompt copied");$("hint").style.color="var(--ok)";$("hint").textContent="Copied. Paste it into Claude."}catch(e){toast("Copy is blocked; open Claude gets and copy it by hand",true)}}
-$("go").onclick=copyPrompt;
+$("go").onclick=()=>copyPrompt();
 $("save").onclick=()=>{const j=curJob();const name=(j.fields||[]).map(valText).filter(x=>x&&x.length<40).slice(0,2).join(" · ")||j.name;(presets[S.sk.name]=presets[S.sk.name]||[]).push({name,job:S.job,v:{...S.v}});store.set("sklc.presets",presets);launch();toast("Preset saved")};
 
 /* ---------------- triggers ---------------- */
