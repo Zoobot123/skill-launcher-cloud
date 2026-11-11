@@ -15,6 +15,14 @@ gh api repos/Zoobot123/claude-skills/git/trees/main?recursive=1
 gh api repos/Zoobot123/<repo>/contents/skills/<skill>/SKILL.md
 ```
 
+## The common library at the repo root (user 2026-11-11: "add a new common character folder and style folder in root, html should work from it from now")
+- styles/<id>.json        the art styles (id, name, head = the prompt words, neg, use, order ...). The form's Style list.
+- characters/<story>/<name>.md   the character profiles (look and voice). The form's Cast list; the trigger's Cast line
+  says `<Name>, 18+ version (profile characters/<story>/<name>.md)`. The file name is the name: mash-v2.md -> Mash
+  (a v2 profile, chosen over mash.md), bb.md -> BB (3 letters or less in capitals), yui-and-yukino.md -> Yui and yukino.
+- Both live in manga-skills (claude-skills is read too). stock.json's styles / profiles lists (PC paths) are used only
+  while the folder is empty. Add a style or a character = add its file there (README.md files are skipped).
+
 ## Layout (the same in both repos)
 - skills/<name>/    loaded skills (skills/README.md lists them).
 - library/<name>/   stored skills, never loaded (library/README.md in claude-skills; skills/README.md in manga-skills).

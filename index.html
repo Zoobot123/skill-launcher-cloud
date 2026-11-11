@@ -648,11 +648,33 @@ async function loadRepo(r){   // one repo: head, file tree, and the launcher's o
   const [stock,fmap,pending]=await Promise.all([jsonAt(CD+"/stock.json"),jsonAt(CD+"/families.json"),jsonAt(CD+"/pending.json")]);
   return {id:r.id,head:h.sha,tree,folders:Object.fromEntries(t.tree.filter(x=>x.type==="tree").map(x=>[x.path,x.sha])),stock:stock||{},fmap:fmap||{},pending:Array.isArray(pending)?pending:[]}}
 const okRepos=()=>REPOS.filter(r=>S.rs[r.id]&&!S.rs[r.id].err);
+// The common library at the repo root (user, 2026-11-11: "add a new common character folder and style folder in root,
+// html should work from it from now"): styles/<id>.json and characters/<story>/<name>.md in manga-skills or claude-skills.
+// They give the Style and Cast lists; stock.json (written by the PC sync, with PC paths) fills a list only while its folder
+// is empty. A character's name is its file name: mash-v2.md -> Mash (a v2 profile), bb.md -> BB (3 letters or less in
+// capitals), yui-and-yukino.md -> Yui and yukino.
+const charName=file=>{const b=file.replace(/-v\d+$/i,"").replace(/[-_]+/g," ").trim();return b.length<=3?b.toUpperCase():b.charAt(0).toUpperCase()+b.slice(1)};
+async function loadCommon(repos){
+  const cache=store.get("sklc.common",{}),keep={},sty=[],chars={},work=[];
+  repos.forEach(g=>g.tree.forEach(x=>{
+    if(/^styles\/[^/]+\.json$/.test(x.path))work.push([x,g.id]);
+    else if(/^characters\/(?:[^/]+\/)?[^/]+\.md$/i.test(x.path)&&!/(^|\/)README\.md$/i.test(x.path)){
+      const parts=x.path.split("/"),file=parts.pop().replace(/\.md$/i,""),story=parts.length>1?parts[1]:"",name=charName(file),v2=/-v\d+$/i.test(file);
+      const o={value:name,label:name,path:x.path,repo:g.id,v2,note:file,group:story?pretty(story):"Characters"};
+      if(!chars[name]||(v2&&!chars[name].v2))chars[name]=o}}));
+  await Promise.all(Array.from({length:6},async()=>{while(work.length){const [x,repo]=work.pop();let m=cache[x.sha];
+    if(!m){try{const d=JSON.parse(await readText(x.sha,repo));m={name:d.name||"",note:d.use||d.look||d.name||"",order:typeof d.order==="number"?d.order:99}}catch(e){m={note:"",order:99}}}
+    keep[x.sha]=m;const id=x.path.slice(7,-5);sty.push({value:id,label:id,note:m.note,order:m.order,path:x.path,repo})}}));
+  store.set("sklc.common",keep);
+  if(sty.length)S.stock.styles=sty.sort((a,b)=>a.order-b.order||a.value.localeCompare(b.value));
+  const cl=Object.values(chars);if(cl.length)S.stock.profiles=cl.sort((a,b)=>a.label.localeCompare(b.label));
+  S.common={styles:sty.length,characters:cl.length}}
 async function loadAll(){
   const got=await Promise.all(REPOS.map(r=>loadRepo(r).catch(e=>({id:r.id,err:e.message}))));
   S.rs={};got.forEach(g=>{S.rs[g.id]=g});
   if(!got.some(g=>!g.err))throw new Error(got[0].err);
   S.stock={};got.filter(g=>!g.err).forEach(g=>{for(const k in g.stock)if(!(k in S.stock))S.stock[k]=g.stock[k]});
+  await loadCommon(got.filter(g=>!g.err));
   const mds=[],lfs=[];got.filter(g=>!g.err).forEach(g=>g.tree.forEach(x=>{
     if(/^(skills|library)\/[^/]+\/SKILL\.md$/.test(x.path))mds.push({...x,repo:g.id});else if(/^(skills|library)\/[^/]+\/launcher\.json$/.test(x.path))lfs.push({...x,repo:g.id})}));
   const cache=store.get("sklc.meta2",{}),lcache=store.get("sklc.lmeta",{}),meta={},lmeta={};let done=0;
@@ -935,9 +957,11 @@ $("bsave").onclick=()=>busy($("bsave"),async()=>{const s=S.sk,jid=S.job,txt=$("b
   const d=JSON.parse(await readText(e.sha,s.repo)),j=(d.jobs||[]).find(x=>x.id===jid);if(!j)throw new Error("This job is not in launcher.json any more. Reload.");
   if(txt.trim()){if(j.brief&&j.brief_default==null)j.brief_default=j.brief;j.brief=txt}else delete j.brief;
   await commit([{path,content:JSON.stringify(d,null,1)+"\n"}],`${s.name}: brief of ${jid} (cloud)`,s.repo);toast("Brief saved to GitHub");await loadAll()});
-// The cast's profile: the GitHub copy when there is one, else the PC path from stock.json. Since 2026-11-09 every job runs on
+// The cast's profile: a file of the common characters/ folder (since 2026-11-11), else the GitHub copy of a stock.json
+// profile when there is one, else its PC path. Since 2026-11-09 every job runs on
 // the PC (user: "move away from github and drive, switch back to local"), so a PC path opens there (it was dropped before).
-function profileIn(o,repo){if(!o||!o.path)return "";const p=String(o.path).replace(/\\/g,"/"),m=p.match(/[^/]+\/profiles\/[^/]+$/),key=m?m[0]:p.split("/").pop();
+function profileIn(o,repo){if(!o||!o.path)return "";if(o.repo)return (o.repo===repo?"":`${o.repo}/`)+o.path;   // a characters/ file: its own repo path
+  const p=String(o.path).replace(/\\/g,"/"),m=p.match(/[^/]+\/profiles\/[^/]+$/),key=m?m[0]:p.split("/").pop();
   for(const r of okRepos()){const f=S.rs[r.id].tree.find(x=>x.path===key||x.path.endsWith("/"+key));if(f)return (r.id===repo?"":`${r.id}/`)+f.path}return String(o.path)}
 // {{if Field=a|b}} ... {{else}} ... {{end}} (also Field!=a, Field~=a|b / Field!~=a|b for a many field, or {{if Field}} = has a value): the text between stays only when
 // the field's value matches, so a trigger carries only the branch the form picked (user 2026-11-06; since 2026-11-09 solo
