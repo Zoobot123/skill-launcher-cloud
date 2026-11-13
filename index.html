@@ -510,6 +510,7 @@ details.adv>.cb{padding:0 14px 14px}
           <div class="sumline" id="sumline"></div>
           <div class="row">
             <span class="gos" id="gos"></span><button class="go" id="go" title="Copies the prompt"><i class="ti ti-copy"></i><span>Copy prompt</span><kbd>Ctrl ↵</kbd></button>
+            <button class="ib" id="dlmode" aria-label="Download as .txt instead of copy" title="Download as .txt instead of copy"><i class="ti ti-file-download"></i></button>
             <button class="ib" id="save" aria-label="Save preset" title="Save as preset"><i class="ti ti-star"></i></button>
           </div>
           <div class="hint" id="hint"></div>
@@ -998,7 +999,7 @@ function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[
     const lab=id=>{const f=fields.find(x=>x.id===id);return f?(f.label||f.id):id};
     const misses=btns.map(b=>Array.isArray(b.needs)?b.needs.filter(id=>{const f=fields.find(x=>x.id===id);return f&&fieldOn(f)&&(vals[id]==null||vals[id]==="")}).map(lab):missing);
     text=texts[S.btn];S.prompt={text,texts,misses,missing:misses[S.btn]};
-    $("go").hidden=true;$("gos").innerHTML=btns.map((b,i)=>`<button class="go${i===S.btn?" on":""}${misses[i].length?" wait":""}" data-b="${i}" title="Copies this prompt"><i class="ti ${esc(b.icon||"ti-copy")}"></i><span>${esc(b.label||"Copy "+(i+1))}</span></button>`).join("");
+    $("go").hidden=true;$("gos").innerHTML=btns.map((b,i)=>`<button class="go${i===S.btn?" on":""}${misses[i].length?" wait":""}" data-b="${i}" title="Copies this prompt"><i class="ti ${S.dl?"ti-download":esc(b.icon||"ti-copy")}"></i><span>${esc(b.label||"Copy "+(i+1))}</span></button>`).join("");
     $("gos").querySelectorAll("[data-b]").forEach(el=>el.onclick=()=>copyPrompt(+el.dataset.b));
     $("outc").querySelector(".oh b").textContent="Claude gets: "+(btns[S.btn].label||"");}
   else{text=j.brief&&!S.form.fallback?fillBrief(j.brief,vals,cv):head+(lines.length?"\n\n"+lines.join("\n"):"")+(tail.trim()?"\n\n"+tail.trim():"");S.prompt={text,missing};
@@ -1011,8 +1012,16 @@ function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[
   $("prog").innerHTML=need.length?`<div class="ring${got===need.length?" full":""}" style="--p:${pc}" title="${got} of ${need.length} needed settings"><span>${got===need.length?'<i class="ti ti-check" style="color:var(--ok)"></i>':got+"/"+need.length}</span></div>`:""}
 $("peek").onclick=()=>{S.open=!S.open;$("stage").classList.toggle("open",S.open);$("peekChev").className="ti ti-chevron-"+(S.open?"down":"up")};
 async function copyPrompt(i){if(typeof i==="number"&&S.prompt&&S.prompt.texts){S.btn=i;S.keepHint=true;prompt()}const p=S.prompt;if(!p)return;if(p.missing.length){$("hint").textContent="Fill "+p.missing.join(", ");$("hint").style.color="var(--acc)";return}
+  if(S.dl){const lab=(S.prompt.texts&&Array.isArray(curJob().buttons)?(curJob().buttons[S.btn||0].label||""):"")||curJob().name||"prompt";
+    const fn=(S.sk.name+"-"+lab).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+".txt";
+    const u=URL.createObjectURL(new Blob([p.text],{type:"text/plain;charset=utf-8"})),el=document.createElement("a");el.href=u;el.download=fn;document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+    toast("Saved "+fn);$("hint").style.color="var(--ok)";$("hint").textContent="Downloaded "+fn+". Send it to Claude.";return}
   try{await navigator.clipboard.writeText(p.text);toast("Prompt copied");$("hint").style.color="var(--ok)";$("hint").textContent="Copied. Paste it into Claude."}catch(e){toast("Copy is blocked; open Claude gets and copy it by hand",true)}}
 $("go").onclick=()=>copyPrompt();
+// Download as .txt instead of copy (user, 2026-11-13): the file button flips every Copy button to a download; remembered here
+S.dl=!!store.get("sklc.dl",false);const dlShow=()=>{const el=$("dlmode");el.classList.toggle("on",S.dl);el.style.color=S.dl?"var(--ok)":"";el.title=S.dl?"Download mode on: the buttons save a .txt (tap to copy instead)":"Download as .txt instead of copy";
+  if(S.prompt&&S.prompt.texts)prompt();const g=$("go").querySelector("span");if(g)g.textContent=S.dl?"Download .txt":"Copy prompt"};
+$("dlmode").onclick=()=>{S.dl=!S.dl;store.set("sklc.dl",S.dl);dlShow();toast(S.dl?"Buttons now download a .txt":"Buttons copy again")};dlShow();
 $("save").onclick=()=>{const j=curJob();const name=(j.fields||[]).map(valText).filter(x=>x&&x.length<40).slice(0,2).join(" · ")||j.name;(presets[S.sk.name]=presets[S.sk.name]||[]).push({name,job:S.job,v:{...S.v}});store.set("sklc.presets",presets);launch();toast("Preset saved")};
 
 /* ---------------- triggers ---------------- */
