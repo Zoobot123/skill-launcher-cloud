@@ -276,6 +276,13 @@ body.scrolldown .bar{gap:0}
 .preset button:hover{color:var(--tx);background:var(--s3)}
 .preset button+button{border-left:1px solid var(--line2);padding:6px 8px}
 .preset i{color:var(--warn)}
+.hist{display:flex;flex-direction:column;gap:4px}
+.hrow{display:flex;align-items:stretch;border-radius:9px;background:var(--s2);border:1px solid var(--line2);overflow:hidden;font-size:12px}
+.hrow button{background:none;border:0;padding:6px 10px;color:var(--tx2);text-align:left;min-width:0}
+.hrow button:first-child{flex:1;display:flex;flex-direction:column;gap:2px}
+.hrow button:hover{color:var(--tx);background:var(--s3)}
+.hrow button+button{border-left:1px solid var(--line2);padding:6px 8px}
+.hrow .hs{color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 details.adv{background:var(--s1);border:1px solid var(--line);border-radius:var(--r3);margin-bottom:10px}
 details.adv>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-size:13px;font-weight:600}
 details.adv>summary::-webkit-details-marker{display:none}
@@ -489,6 +496,10 @@ details.adv>.cb{padding:0 14px 14px}
           <summary><span class="ic"><i class="ti ti-star"></i></span>Presets<span class="muted" id="pcount" style="font-weight:400;font-size:12px"></span><i class="ti ti-chevron-right chev"></i></summary>
           <div class="cb"><div class="presets" id="presets"></div></div>
         </details>
+        <details class="adv" id="histBox">
+          <summary><span class="ic"><i class="ti ti-history"></i></span>History<span class="muted" id="hcount" style="font-weight:400;font-size:12px"></span><i class="ti ti-chevron-right chev"></i></summary>
+          <div class="cb"><div class="hist" id="hist"></div></div>
+        </details>
         <details class="adv" id="bbox" hidden>
           <summary><span class="ic"><i class="ti ti-file-text"></i></span>Edit brief<span class="muted" style="font-weight:400;font-size:12px">the text COPY gives Claude</span><i class="ti ti-chevron-right chev"></i></summary>
           <div class="cb">
@@ -596,6 +607,24 @@ const KEYS=/pst-[A-Za-z0-9_-]{20,}|sk-or-v1-[A-Za-z0-9]{20,}|sk-ant-[A-Za-z0-9_-
 const saved=store.get("sklc.filter",{});
 const S={token:store.get("sklc.token",""),skills:[],sk:null,rs:{},form:null,job:null,v:{},q:"",open:false,view:"list",tab:"launch",fam:saved.fam||"",place:saved.place||"on",repo:saved.repo||"all",stock:{},ed:null,prompt:null,closed:new Set()};
 let presets=store.get("sklc.presets",{});
+// Settings survive a reload (user, 2026-11-15: "page reload and i lost all setting"): a draft per skill and job, saved
+// on every change (only values that differ from the default, so a new default still arrives), and a history log:
+// every Copy saves its settings (newest first, 25 a skill); loading a preset or an entry first logs what you had.
+let drafts=store.get("sklc.drafts",{}),hist=store.get("sklc.hist",{});
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b),blank=v=>v==null||v===""||(Array.isArray(v)&&!v.length);
+function cleanV(v,job){const j=S.form&&S.form.jobs.find(x=>x.id===job),o={};if(!j)return o;for(const f of j.fields||[]){if(!(f.id in v)||f.type==="image")continue;const x=v[f.id];
+  if(f.type==="one"&&Array.isArray(f.options)&&f.options.length&&!blank(x)&&!f.options.some(p=>p.value===x))continue;o[f.id]=x}return o}
+const draftV=job=>{const d=S.sk&&drafts[S.sk.name];return d&&d.jobs&&d.jobs[job]?cleanV(d.jobs[job].v||{},job):{}};
+function changedV(){const j=curJob(),o={};for(const f of (j&&j.fields)||[]){const x=S.v[f.id];if(f.type==="image"||x===undefined||same(x,f.default)||(blank(x)&&blank(f.default)))continue;o[f.id]=x}return o}
+function saveDraft(){if(!S.sk||!S.form||!S.job)return;const d=drafts[S.sk.name]||(drafts[S.sk.name]={jobs:{}});d.jobs=d.jobs||{};
+  const v=changedV();if(d.job===S.job&&d.jobs[S.job]&&same(d.jobs[S.job].v,v))return;d.job=S.job;d.jobs[S.job]={v,t:Date.now()};store.set("sklc.drafts",drafts)}
+function logHist(why){if(!S.sk||!S.form||!curJob())return;const j=curJob(),v=changedV();if(why!=="copy"&&!Object.keys(v).length)return;
+  const btn=why==="copy"?(Array.isArray(j.buttons)&&S.prompt&&S.prompt.texts?((j.buttons[S.btn||0]||{}).label||"Copy"):"Copy"):"before a load",a=hist[S.sk.name]||[];
+  if(a.length&&a[0].job===S.job&&same(a[0].v,v)){a[0].t=Date.now();if(why==="copy")a[0].btn=btn}else a.unshift({t:Date.now(),job:S.job,btn,v});
+  hist[S.sk.name]=a.slice(0,25);store.set("sklc.hist",hist)}
+const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString(undefined,{day:"numeric",month:"short"})+" "+d.toTimeString().slice(0,5)};
+function histSum(h){const j=S.form.jobs.find(x=>x.id===h.job);if(!j)return "";const keep=S.v;S.v=h.v;let s="";
+  try{s=(j.fields||[]).filter(f=>f.type!=="image"&&!blank(h.v[f.id])).map(f=>{const x=valText(f);return x.length>40?x.slice(0,39)+"…":x}).filter(Boolean).slice(0,6).join(" · ")}finally{S.v=keep}return s}
 function toast(t,err){const e=$("toast");e.textContent=t;e.classList.toggle("err",!!err);e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),err?4200:1800)}
 
 /* ---------------- GitHub ---------------- */
@@ -806,7 +835,8 @@ async function loadForm(){const s=S.sk;if(!s)return;S.bkey=null;
   d.jobs.forEach(j=>(j.fields||[]).forEach(f=>{const src=f.source||{cast:"profiles",style:"styles"}[f.type];
     if(src)f.options=(f.type==="style"&&f.own?[{value:f.own,label:f.own,note:"Keep the source picture's look"}]:[]).concat(f.type==="style"?[OFFICIAL_OPT]:[]).concat(S.stock[src]||[]);else if(Array.isArray(f.options))f.options=f.options.map(o=>typeof o==="object"?o:{value:o,label:o})}));
   S.form={...d,fallback};$("lalias").innerHTML=d.alias?`<span class="pill mut">${esc(d.alias)}</span>`:fallback?'<span class="pill warn">no form yet · plain text</span>':"";
-  if(!S.job||!d.jobs.find(j=>j.id===S.job))S.job=d.jobs[0].id;defaults();launch()}
+  const dr=drafts[s.name];if(!S.job||!d.jobs.find(j=>j.id===S.job))S.job=dr&&d.jobs.find(j=>j.id===dr.job)?dr.job:d.jobs[0].id;
+  if(!Object.keys(S.v).length){S.v=draftV(S.job);if(Object.keys(S.v).length)toast("Your last settings are back")}defaults();launch()}
 const curJob=()=>S.form.jobs.find(j=>j.id===S.job);
 // A field may name the job options it belongs to: when:{Job:["a","b"]}. Off fields grey out and leave the prompt.
 // The 18+ switch (a switch field with "adult": true, user 2026-11-07): on, a cast reads "Name, 18+ version"; off, the
@@ -828,7 +858,7 @@ function modesNav(moved){const jobs=S.form.jobs,gs=S.form.groups||[],gname=id=>(
   jobs.forEach(x=>{if(jobs.length>1&&x.group!==last&&gname(x.group)){h+=`<div class="mg">${esc(gname(x.group))}</div>`}last=x.group;
     h+=`<button class="mode${x.id===S.job?" on":""}" data-j="${esc(x.id)}" title="${esc(x.blurb||x.name)}"><span class="mi"><i class="ti ${esc(x.icon||"ti-player-play")}"></i></span><span style="min-width:0"><span class="mn">${esc(x.name)}</span>${x.blurb?`<span class="mb">${esc(x.blurb)}</span>`:""}</span></button>`});
   $("modes").innerHTML=h;
-  $("modes").querySelectorAll(".mode").forEach(b=>b.onclick=()=>{if(S.job===b.dataset.j)return;S.job=b.dataset.j;S.v={};defaults();launch();if(matchMedia("(max-width:860px)").matches)b.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"})});
+  $("modes").querySelectorAll(".mode").forEach(b=>b.onclick=()=>{if(S.job===b.dataset.j)return;S.job=b.dataset.j;S.v=draftV(S.job);defaults();launch();if(matchMedia("(max-width:860px)").matches)b.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"})});
   const on=$("modes").querySelector(".mode.on");if(moved&&on&&matchMedia("(max-width:860px)").matches)on.scrollIntoView({inline:"center",block:"nearest"})}
 function fieldHTML(f){const v=S.v[f.id],lab=f.label||f.id,opts=f.options||[],id=esc(f.id);let body;
   if(!fieldOn(f))return `<div class="fld off" aria-disabled="true"><div class="lbl">${esc(lab)}</div><div class="help">Not used by this job.</div></div>`;
@@ -913,6 +943,11 @@ function renderPk(){const f=pkField();if(!f)return;const opts=f.options||[],sel=
 
 function valText(f){if(f.type==="image")return "";let v=S.v[f.id];if(v==null)v=f.default;if(f.type==="switch")return v?(f.adult?(f.label||f.id):(f.on||f.label||f.id)):(f.off||"");if(Array.isArray(v))v=v.join(", ");return v==null?"":String(v)}
 let LASTJOB=null;
+function renderHist(){if(!S.sk||!S.form)return;
+  const hs=hist[S.sk.name]||[];$("hcount").textContent=hs.length?`· ${hs.length}`:"";
+  $("hist").innerHTML=hs.length?hs.map((h,i)=>`<div class="hrow"><button data-h="${i}" title="Load these settings"><span><b>${esc(fmtT(h.t))}</b> · ${esc((S.form.jobs.find(x=>x.id===h.job)||{}).name||h.job)}${h.btn?` <span class="muted">· ${esc(h.btn)}</span>`:""}</span><span class="hs">${esc(histSum(h))||"default settings"}</span></button><button data-hx="${i}" aria-label="Delete entry" title="Delete"><i class="ti ti-x" style="color:var(--tx3)"></i></button></div>`).join(""):'<span class="help" style="margin:0">Every Copy saves its settings here; tap one to load it again. Your settings also stay after a reload.</span>';
+  $("hist").querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>{const h=hs[+b.dataset.h];logHist("load");if(S.form.jobs.find(x=>x.id===h.job))S.job=h.job;S.v=cleanV({...h.v},S.job);defaults();launch();toast("Settings loaded")});
+  $("hist").querySelectorAll("[data-hx]").forEach(b=>b.onclick=()=>{hs.splice(+b.dataset.hx,1);hist[S.sk.name]=hs;store.set("sklc.hist",hist);renderHist()})}
 function launch(){const j=curJob();const SC=document.scrollingElement||document.documentElement;
   const MOVED=LASTJOB!==j.id;const KEEPY=MOVED?null:SC.scrollTop;LASTJOB=j.id;
   modesNav(MOVED);if(PK.f&&!pkField())closePicker();
@@ -926,13 +961,14 @@ function launch(){const j=curJob();const SC=document.scrollingElement||document.
   $("lform").querySelectorAll(".gcard>.ch").forEach(b=>b.onclick=()=>{const c=b.parentNode,k=c.dataset.g;c.classList.toggle("open");if(c.classList.contains("open")){S.closed.delete(k);c.classList.add("opening");setTimeout(()=>c.classList.remove("opening"),300)}else S.closed.add(k)});
   $("lform").querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>openPicker(b.dataset.pk));
   $("lform").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const f=b.dataset.f,o=b.dataset.v;{const ff=curJob().fields.find(x=>x.id===f);if(ff&&usePicker(ff))addRecent(ff,o)}if(b.dataset.m){let a=Array.isArray(S.v[f])?S.v[f].slice():String(S.v[f]||"").split(", ").filter(Boolean);a=a.includes(o)?a.filter(z=>z!==o):a.concat(o);S.v[f]=a}else{const ff=curJob().fields.find(x=>x.id===f);S.v[f]=S.v[f]===o&&!ff.default?null:o;applyPreset(ff,S.v[f])}launch()});
-  $("lform").querySelectorAll("[data-t]").forEach(b=>{b.oninput=()=>{S.v[b.dataset.t]=b.value;prompt()};b.onchange=()=>{const a=document.activeElement;launch();const n=a&&a.dataset&&a.dataset.t?$("lform").querySelector(`[data-t="${CSS.escape(a.dataset.t)}"]`):null;if(n)n.focus()}});
+  $("lform").querySelectorAll("[data-t]").forEach(b=>{b.oninput=()=>{S.v[b.dataset.t]=b.value;prompt();saveDraft()};b.onchange=()=>{const a=document.activeElement;launch();const n=a&&a.dataset&&a.dataset.t?$("lform").querySelector(`[data-t="${CSS.escape(a.dataset.t)}"]`):null;if(n)n.focus()}});
   $("lform").querySelectorAll("[data-sw]").forEach(b=>b.onchange=()=>{S.v[b.dataset.sw]=b.checked;launch()});
   const ps=presets[S.sk.name]||[];$("pcount").textContent=ps.length?`· ${ps.length}`:"";
   $("presets").innerHTML=ps.length?ps.map((p,i)=>`<span class="preset"><button data-p="${i}" title="Load"><i class="ti ti-star-filled"></i>${esc(p.name)}${p.job&&p.job!==S.job?` <span class="muted">· ${esc((S.form.jobs.find(x=>x.id===p.job)||{}).name||p.job)}</span>`:""}</button><button data-px="${i}" aria-label="Delete preset" title="Delete"><i class="ti ti-x" style="color:var(--tx3)"></i></button></span>`).join(""):'<span class="help" style="margin:0">None yet. Fill the settings and tap the star next to Copy.</span>';
-  $("presets").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=ps[b.dataset.p];if(p.job&&S.form.jobs.find(x=>x.id===p.job))S.job=p.job;S.v={...p.v};launch();toast("Preset loaded")});
+  $("presets").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{logHist("load");const p=ps[b.dataset.p];if(p.job&&S.form.jobs.find(x=>x.id===p.job))S.job=p.job;S.v={...p.v};launch();toast("Preset loaded")});
   $("presets").querySelectorAll("[data-px]").forEach(b=>b.onclick=()=>{ps.splice(b.dataset.px,1);presets[S.sk.name]=ps;store.set("sklc.presets",presets);launch()});
-  briefUI();prompt();
+  renderHist();
+  briefUI();prompt();saveDraft();
   if(KEEPY!=null&&SC.scrollTop!==KEEPY)SC.scrollTop=KEEPY}
 /* ---------------- edit brief (the text COPY gives Claude) ---------------- */
 function briefUI(){const box=$("bbox");if(S.form.fallback){box.hidden=true;return}box.hidden=false;const j=curJob(),key=S.sk.name+"|"+j.id;
@@ -1012,6 +1048,7 @@ function prompt(){const s=S.sk,j=curJob(),fields=j.fields||[],missing=[],lines=[
   $("prog").innerHTML=need.length?`<div class="ring${got===need.length?" full":""}" style="--p:${pc}" title="${got} of ${need.length} needed settings"><span>${got===need.length?'<i class="ti ti-check" style="color:var(--ok)"></i>':got+"/"+need.length}</span></div>`:""}
 $("peek").onclick=()=>{S.open=!S.open;$("stage").classList.toggle("open",S.open);$("peekChev").className="ti ti-chevron-"+(S.open?"down":"up")};
 async function copyPrompt(i){if(typeof i==="number"&&S.prompt&&S.prompt.texts){S.btn=i;S.keepHint=true;prompt()}const p=S.prompt;if(!p)return;if(p.missing.length){$("hint").textContent="Fill "+p.missing.join(", ");$("hint").style.color="var(--acc)";return}
+  logHist("copy");renderHist();
   if(S.dl){const lab=(S.prompt.texts&&Array.isArray(curJob().buttons)?(curJob().buttons[S.btn||0].label||""):"")||curJob().name||"prompt";
     const fn=(S.sk.name+"-"+lab).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+".txt";
     const u=URL.createObjectURL(new Blob([p.text],{type:"text/plain;charset=utf-8"})),el=document.createElement("a");el.href=u;el.download=fn;document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);

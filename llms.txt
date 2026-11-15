@@ -40,6 +40,13 @@ gh api repos/Zoobot123/<repo>/contents/skills/<skill>/SKILL.md
   [{op: trash|move|repo, skill, to, area?, at}]. op "repo" = the folder <area>/<skill>/ went to the repo in "to".
   The next PC sync applies and clears them.
 
+## Form settings in the browser (user 2026-11-15: "page reload and i lost all setting")
+- Every change of a form is saved in the browser's localStorage `sklc.drafts` {skill: {job, jobs: {job: {v, t}}}}: only
+  the values that differ from the field's default, so a reload, a job switch or a new launcher default keeps them.
+- Every Copy (or .txt download) adds an entry to `sklc.hist` {skill: [{t, job, btn, v}]}, newest first, 25 a skill; the
+  History box under Presets loads one again. Loading a preset or an entry first logs the current settings ("before a load").
+- Nothing of this goes to GitHub; it stays on that phone or browser.
+
 ## How the PC takes a cloud change
 - manga-skills: the PC Skill Launcher sync. Moving or removing a skill must also add a pending.json entry, or the sync puts it back.
 - claude-skills: skills-sync (git pull with rebase, PC and phone). git applies moves and removals by itself; no pending.json.
