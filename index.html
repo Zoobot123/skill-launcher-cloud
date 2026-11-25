@@ -485,7 +485,7 @@ details.adv>.cb{padding:0 14px 14px}
         <div class="search"><i class="ti ti-search"></i><input class="in" id="q" placeholder="Search skills, or type a prompt to see which skill fires" autocomplete="off"><span class="kbd">/</span></div>
         <select class="in" id="sortby" aria-label="Sort"><option value="name">A–Z</option><option value="date">New</option></select>
       </div>
-      <div class="crow" id="crow"><div class="seg sm" id="repos"></div><span class="vsep"></span><div class="seg sm" id="places"></div><span class="vsep"></span><div class="cats" id="cats"></div></div>
+      <div class="warnbox" id="repoWarn" hidden style="margin:8px 0"></div><div class="crow" id="crow"><div class="seg sm" id="repos"></div><span class="vsep"></span><div class="seg sm" id="places"></div><span class="vsep"></span><div class="cats" id="cats"></div></div>
       <div class="qres" id="qres" hidden></div>
     </div>
     <div id="list"><div class="feat" style="margin-top:16px"><div class="skel" style="height:168px"></div><div class="skel" style="height:168px"></div><div class="skel" style="height:168px"></div></div><div class="empty" id="loading" style="margin-top:14px">Reading your skills…</div></div>
@@ -619,8 +619,8 @@ const CASTCOL=["#B79CFF","#FF7A9A","#5CD6FF","#FF9ED2","#6BE3A0","#FFD34E","#FFA
 const GROUPS={source:["Source","ti-photo"],cast:["Cast & style","ti-users"],story:["Story","ti-feather"],run:["Run","ti-adjustments-horizontal"],notes:["Notes","ti-notes"],input:["Inputs","ti-forms"]};
 const COST={rolls:["Rolls NovelAI","warn"],"V4.5 rolls":["V4.5 rolls","info"],text:["Text only","ok"],"free size":["Free size","ok"]};
 const KEYS=/pst-[A-Za-z0-9_-]{20,}|sk-or-v1-[A-Za-z0-9]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AIza[0-9A-Za-z_-]{35}|ya29\.[0-9A-Za-z_-]{20,}|GOCSPX-[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|hf_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}/;
-const saved=store.get("sklc.filter",{});
-const S={token:store.get("sklc.token",""),skills:[],sk:null,rs:{},form:null,job:null,v:{},q:"",open:false,view:"list",tab:"launch",fam:saved.fam||"",place:saved.place||"on",repo:saved.repo||"all",stock:{},ed:null,prompt:null,closed:new Set()};
+const saved=store.get("sklc.filter2",{});   // filter2 (2026-11-25): the page opens on All, Both repos, every category; "why it so few of them"
+const S={token:store.get("sklc.token",""),skills:[],sk:null,rs:{},form:null,job:null,v:{},q:"",open:false,view:"list",tab:"launch",fam:saved.fam||"",place:saved.place||"all",repo:saved.repo||"all",stock:{},ed:null,prompt:null,closed:new Set()};
 let presets=store.get("sklc.presets",{});
 // Settings survive a reload (user, 2026-11-15: "page reload and i lost all setting"): a draft per skill and job, saved
 // on every change (only values that differ from the default, so a new default still arrives), and a history log:
@@ -799,7 +799,7 @@ $("sortby").value=S.sort;
 const fmtDate=t=>t?new Date(t*1000).toISOString().slice(2,10):"";
 const ago=t=>{if(!t)return "";const s=Date.now()/1000-t;return s<5400?Math.round(s/60)+" min ago":s<129600?Math.round(s/3600)+" h ago":Math.round(s/86400)+" d ago"};
 $("sortby").onchange=e=>{S.sort=e.target.value;try{localStorage.setItem("sklc.sort",S.sort)}catch(err){}if(S.sort==="date")loadDates();renderList()};
-function setFilter(f,p,r){S.fam=f;S.place=p;if(r!==undefined)S.repo=r;store.set("sklc.filter",{fam:f,place:p,repo:S.repo});renderList()}
+function setFilter(f,p,r){S.fam=f;S.place=p;if(r!==undefined)S.repo=r;store.set("sklc.filter2",{fam:f,place:p,repo:S.repo});renderList()}
 const repoTag=s=>{const r=repoOf(s.repo);return `<span class="pill" style="color:${r.color};background:color-mix(in srgb,${r.color} 13%,transparent)" title="${esc(OWNER+"/"+r.id)}"><i class="ti ${r.icon}"></i>${esc(r.label)}</span>`};
 const showRepo=()=>S.repo==="all"&&okRepos().length>1;
 const modeBadge=s=>s.mode==="manual"?'<span class="pill info">/manual</span>':s.mode==="library"?'<span class="pill mut">library</span>':"";
@@ -827,6 +827,7 @@ function renderList(){if(S.view!=="list")return;const q=S.q.toLowerCase().trim()
   $("list").innerHTML=html.trim()?html:`<div class="empty" style="margin-top:24px">${q?"No skill matches.":"No skill here. Try All."}</div>`;
   const rq=S.skills.filter(inRepo),sq=rq.filter(inPlace),nOn=rq.filter(s=>s.mode!=="library").length;
   $("repos").innerHTML=[["all","Both",S.skills.length,"ti-stack-2",""]].concat(REPOS.map(r=>{const g=S.rs[r.id];return [r.id,r.label,g&&!g.err?S.skills.filter(s=>s.repo===r.id).length:"!",r.icon,g&&g.err?`${r.id}: ${g.err}`:`${OWNER}/${r.id}: ${r.holds}`]})).map(([k,l,n,ic,t])=>`<button class="${S.repo===k?"on":""}" data-r="${k}" title="${esc(t)}"${n==="!"?" disabled":""}><i class="ti ${ic}"></i>${l} <span class="mono muted" style="font-size:11px">${n}</span></button>`).join("");
+  {const bad=REPOS.filter(r=>S.rs[r.id]&&S.rs[r.id].err),w=$("repoWarn");w.hidden=!bad.length;w.innerHTML=bad.map(r=>`<b>${esc(r.id)}</b> could not be read, so its skills are missing: ${esc(S.rs[r.id].err)} Make a token with Contents read and write on <b>manga-skills</b> and <b>claude-skills</b>, then sign in again.`).join("<br>")}
   $("repos").querySelectorAll("button").forEach(b=>b.onclick=()=>setFilter(S.fam,S.place,b.dataset.r));
   $("places").innerHTML=[["on","Loaded",nOn],["library","Library",rq.length-nOn],["all","All",rq.length]].map(([k,l,n])=>`<button class="${S.place===k?"on":""}" data-p="${k}">${l} <span class="mono muted" style="font-size:11px">${n}</span></button>`).join("");
   $("places").querySelectorAll("button").forEach(b=>b.onclick=()=>setFilter(S.fam,b.dataset.p));
