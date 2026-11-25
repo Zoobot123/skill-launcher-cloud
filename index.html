@@ -754,14 +754,29 @@ function showLinks(){S.view="links";document.body.classList.remove("inskill","in
 async function loadLinks(){const body=$("linksBody"),sub=$("linksSub");sub.textContent="Reading…";
   let d;try{const f=await gh(`${R("manga-skills")}/contents/${LINKS_PATH}?ref=${BRANCH}`);d=JSON.parse(b64d(f.content))}
   catch(e){body.innerHTML="";sub.textContent="";body.innerHTML=`<div class="empty">${/Not found/.test(e.message)?"No links yet. On the PC run <b>PH links</b>; it writes them to the private manga-skills repo.":esc(e.message)}</div>`;return}
-  if(S.view!=="links")return;
-  const good=l=>/^https:\/\/[^\s"'<>]+$/.test(l.url||""),pcs=d.pcs&&typeof d.pcs==="object"?d.pcs:{"PC":{updated:d.updated,links:d.links||[]}},ok=[];   // one group per PC
-  sub.textContent="From the private manga-skills repo. A link dies when its PC sleeps or restarts; run PH links on that PC again.";
-  const html=Object.entries(pcs).sort((a,b)=>a[0].localeCompare(b[0])).map(([pc,g])=>{const ls=(g.links||[]).filter(good);if(!ls.length)return "";
-    return `<div class="lpc"><i class="ti ti-device-desktop"></i> ${esc(pc)}${g.updated?` <span class="pill mut">updated ${esc(ago(Date.parse(g.updated)/1000))}</span>`:""}</div><div class="grid">${ls.map(l=>{const i=ok.push(l)-1;return `<div class="card lcard" style="--c:${esc(l.color||"#a78bfa")}"><span class="tile"><i class="ti ${esc(l.icon||"ti-link")}"></i></span>
-    <div class="bd"><div class="nm">${esc(l.name)}</div><div class="ds">${esc(l.desc||"")}</div><div class="ds mono">${esc(new URL(l.url).host)}</div>
-    <div class="lbtns"><a class="btn go1" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i><span>Open</span></a><button class="btn" data-cp="${i}"><i class="ti ti-copy"></i><span>Copy</span></button></div></div></div>`}).join("")}</div>`}).join("");
-  body.innerHTML=html||`<div class="empty">The links file is empty. On the PC run <b>PH links</b>.</div>`;
+  if(S.view!=="links")return;S.linksData=d;renderLinks()}
+/* one card per app, not one block per PC (user 2026-11-25: "it so annoying to have both of the web across multiple pc"):
+   the main PC (picked once at the top, remembered in this browser; until then the PC that updated last) gives each
+   card its link; a small PC switch on a card opens that app on the other PC for this visit (its PC asleep, or its data). */
+const MAINPC="sklc.mainpc";
+function renderLinks(){const d=S.linksData,body=$("linksBody"),sub=$("linksSub");if(!d)return;
+  const good=l=>/^https:\/\/[^\s"'<>]+$/.test(l.url||""),pcs=d.pcs&&typeof d.pcs==="object"?d.pcs:{"PC":{updated:d.updated,links:d.links||[]}};
+  const names=Object.keys(pcs).filter(pc=>(pcs[pc].links||[]).some(good)),t=pc=>Date.parse(pcs[pc].updated||"")||0;
+  if(!names.length){body.innerHTML=`<div class="empty">The links file is empty. On the PC run <b>PH links</b>.</div>`;sub.textContent="";return}
+  let main=store.get(MAINPC,"");if(!names.includes(main))main=names.slice().sort((a,b)=>t(b)-t(a))[0];
+  const apps=[];for(const pc of [main,...names.filter(n=>n!==main).sort()])for(const l of (pcs[pc].links||[]).filter(good)){
+    let a=apps.find(x=>x.name===l.name);if(!a){a={name:l.name,icon:l.icon,color:l.color,desc:l.desc,by:{}};apps.push(a)}a.by[pc]=l}
+  S.linkPick=S.linkPick||{};const ok=[];
+  sub.textContent=names.length>1?"One card per app, from your main PC. The small PC buttons on a card open that app on the other PC (asleep PC, or its data).":"From the private manga-skills repo. A link dies when its PC sleeps or restarts; run PH links on that PC again.";
+  const top=names.length>1?`<div class="lpc"><i class="ti ti-device-desktop"></i> Main PC ${names.sort().map(pc=>`<button class="chip${pc===main?" on":""}" data-main="${esc(pc)}" title="Remembered in this browser">${esc(pc)} <span class="pill mut">${esc(ago(t(pc)/1000))}</span></button>`).join(" ")}</div>`:"";
+  const cards=apps.map(a=>{const pcList=Object.keys(a.by).sort();let pc=S.linkPick[a.name];if(!a.by[pc])pc=a.by[main]?main:pcList[0];const l=a.by[pc],i=ok.push(l)-1;
+    const sw=pcList.length>1?`<div class="lbtns" style="margin-top:6px">${pcList.map(x=>`<button class="chip${x===pc?" on":""}" data-app="${esc(a.name)}" data-pc="${esc(x)}" style="min-height:26px;padding:2px 10px;font-size:11.5px">${esc(x)}</button>`).join("")}</div>`:"";
+    return `<div class="card lcard" style="--c:${esc(a.color||"#a78bfa")}"><span class="tile"><i class="ti ${esc(a.icon||"ti-link")}"></i></span>
+    <div class="bd"><div class="nm">${esc(a.name)}</div><div class="ds">${esc(a.desc||"")}</div><div class="ds mono">${esc(pc)} · ${esc(new URL(l.url).host)}</div>${sw}
+    <div class="lbtns"><a class="btn go1" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i><span>Open</span></a><button class="btn" data-cp="${i}"><i class="ti ti-copy"></i><span>Copy</span></button></div></div></div>`}).join("");
+  body.innerHTML=top+`<div class="grid">${cards}</div>`;
+  body.querySelectorAll("[data-main]").forEach(b=>b.onclick=()=>{store.set(MAINPC,b.dataset.main);S.linkPick={};renderLinks();toast("Main PC: "+b.dataset.main)});
+  body.querySelectorAll("[data-app]").forEach(b=>b.onclick=()=>{S.linkPick[b.dataset.app]=b.dataset.pc;renderLinks()});
   body.querySelectorAll("[data-cp]").forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(ok[+b.dataset.cp].url);toast("Link copied")}catch(e){toast("Copy failed: "+e.message,true)}})}
 $("linksRe").onclick=loadLinks;
 /* the chip row folds away while scrolling down the list, and comes back on the way up */
