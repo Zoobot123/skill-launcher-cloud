@@ -39,6 +39,9 @@ gh api repos/Zoobot123/<repo>/contents/skills/<skill>/SKILL.md
 - .skill-launcher/pending.json    manga-skills only. Moves and removals done in the cloud, for the PC Skill Launcher sync:
   [{op: trash|move|repo, skill, to, area?, at}]. op "repo" = the folder <area>/<skill>/ went to the repo in "to".
   The next PC sync applies and clears them.
+- .skill-launcher/links.json      manga-skills only (PRIVATE). The phone links {updated, pcs:{<hostname>:{updated, links:[{name,url,icon,color,desc}]}}},
+  written by `phone.py links` (phone-links skill) on each PC. The Links tab (#/links, link button in the header) reads it
+  with the token on every open. The urls carry the Studio key: never copy them into this public repo or localStorage.
 
 ## Form settings in the browser (user 2026-11-15: "page reload and i lost all setting")
 - Every change of a form is saved in the browser's localStorage `sklc.drafts` {skill: {job, jobs: {job: {v, t}}}}: only

@@ -176,6 +176,12 @@ body.scrolldown .bar{gap:0}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .card{position:relative;text-align:left;padding:13px 14px;border-radius:var(--r2);background:var(--s1);border:1px solid var(--line);display:flex;gap:11px;align-items:flex-start;transition:border-color .2s,background .2s;min-height:84px}
 .card:hover{border-color:var(--line3);background:var(--s2)}
+.lhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 14px}
+.lhead .lt{font-size:18px;font-weight:650}.lhead .ls{font-size:12px;color:var(--tx3);margin-top:3px}
+.lcard .ds.mono{font-family:ui-monospace,Consolas,monospace;font-size:11px;-webkit-line-clamp:1}
+.lbtns{display:flex;gap:8px;margin-top:10px}
+.lpc{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--tx2);margin:16px 0 8px}
+#linksBtn.on{border-color:color-mix(in srgb,#a78bfa 60%,transparent);color:#c4b5fd}
 .card.hit{border-color:color-mix(in srgb,var(--c) 70%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 15%,transparent)}
 .card.clash{border-color:rgba(180,124,255,.7)}
 .card.dim .nm,.card.dim .tile{opacity:.6}
@@ -393,8 +399,8 @@ details.adv>.cb{padding:0 14px 14px}
   .brow select{height:36px;padding:0 6px;font-size:13px}
   .cat{height:28px;padding:0 10px;font-size:12px}
   body.inlist .top>.pill{display:none}
-  .statusBtn .lab,#statusBtn .lab{display:none}
-  #statusBtn{width:34px;padding:0}
+  .statusBtn .lab,#statusBtn .lab,#linksBtn .lab{display:none}
+  #statusBtn,#linksBtn{width:34px;padding:0}
   .topskill .seg button span{display:none}
   .topskill .seg button{padding:0 9px}
   body.inskill .brand,body.inskill .top>.pill{display:none}
@@ -468,6 +474,7 @@ details.adv>.cb{padding:0 14px 14px}
       <button class="ib" id="infoBtn" aria-label="About this skill" title="About this skill"><i class="ti ti-info-circle"></i></button>
     </div>
     <span class="tk" id="tokTop" title="Skill descriptions Claude reads at session start"></span>
+    <a class="btn" id="linksBtn" href="#/links" title="My phone links (read from the private manga-skills repo)"><i class="ti ti-link"></i><span class="lab">Links</span></a>
     <button class="btn" id="statusBtn" title="Status"><i class="ti ti-activity-heartbeat"></i><span class="lab">Status</span><span class="badge" id="pendN" hidden></span></button>
   </header>
 
@@ -482,6 +489,14 @@ details.adv>.cb{padding:0 14px 14px}
       <div class="qres" id="qres" hidden></div>
     </div>
     <div id="list"><div class="feat" style="margin-top:16px"><div class="skel" style="height:168px"></div><div class="skel" style="height:168px"></div><div class="skel" style="height:168px"></div></div><div class="empty" id="loading" style="margin-top:14px">Reading your skills…</div></div>
+  </section>
+
+  <!-- ===== phone links: read with the token from the PRIVATE manga-skills repo (.skill-launcher/links.json, written by
+       the PC's phone.py links). This public page holds no link and no key; without the token the tab stays empty. ===== -->
+  <section class="wrap" id="v-links" hidden>
+    <div class="lhead"><div><div class="lt">Phone links</div><div class="ls" id="linksSub">Reading…</div></div>
+      <button class="btn" id="linksRe" title="Read again"><i class="ti ti-refresh"></i><span>Refresh</span></button></div>
+    <div id="linksBody"></div>
   </section>
 
   <!-- ===== one skill ===== -->
@@ -723,12 +738,32 @@ async function loadAll(){
 }
 
 /* ---------------- routing ---------------- */
-function route(){const m=location.hash.match(/^#\/s\/([^/]+)(?:\/(triggers|filter))?/);
+function route(){$("v-links").hidden=true;$("linksBtn").classList.remove("on");if(location.hash==="#/links"){showLinks();return}
+  const m=location.hash.match(/^#\/s\/([^/]+)(?:\/(triggers|filter))?/);
   if(m){const k=decodeURIComponent(m[1]),s=S.skills.find(x=>x.uid===k)||S.skills.find(x=>x.name===k);if(s){const was=S.sk;S.sk=s;S.tab=m[2]==="triggers"?"trig":m[2]==="filter"&&hasFlt(s)?"filter":"launch";if(was!==s){S.fl=null;S.ed=null;S.v={};S.job=null;S.form=null;S.closed=new Set();S.open=false}showSkill();return}}
   S.view="list";document.body.classList.remove("inskill");document.body.classList.add("inlist");$("topSkill").hidden=true;$("spop").hidden=true;$("v-list").hidden=false;$("v-skill").hidden=true;$("back").hidden=true;$("crumb").innerHTML="";document.title="Skill Launcher Cloud";renderList()}
 window.addEventListener("hashchange",()=>{if(S.skills.length)route()});
 function pick(n){location.hash="#/s/"+encodeURIComponent(n)}
 $("back").onclick=()=>{location.hash="#/"};
+/* phone links (user 2026-11-24 "i don't want anybody know"): the links carry the Studio gate's key, so they live only in the
+   PRIVATE manga-skills repo (.skill-launcher/links.json, rewritten by `phone.py links` on the PC whenever a tunnel address
+   changes). Read here with the token on every open, kept in memory only - never in localStorage, never in this public repo. */
+const LINKS_PATH=CD+"/links.json";
+function showLinks(){S.view="links";document.body.classList.remove("inskill","inlist","scrolldown");$("v-list").hidden=true;$("v-skill").hidden=true;$("v-links").hidden=false;
+  $("topSkill").hidden=true;$("spop").hidden=true;$("back").hidden=false;$("linksBtn").classList.add("on");$("crumb").innerHTML='<span class="cur">Links</span>';document.title="Links · Skill Launcher Cloud";window.scrollTo({top:0});loadLinks()}
+async function loadLinks(){const body=$("linksBody"),sub=$("linksSub");sub.textContent="Reading…";
+  let d;try{const f=await gh(`${R("manga-skills")}/contents/${LINKS_PATH}?ref=${BRANCH}`);d=JSON.parse(b64d(f.content))}
+  catch(e){body.innerHTML="";sub.textContent="";body.innerHTML=`<div class="empty">${/Not found/.test(e.message)?"No links yet. On the PC run <b>PH links</b>; it writes them to the private manga-skills repo.":esc(e.message)}</div>`;return}
+  if(S.view!=="links")return;
+  const good=l=>/^https:\/\/[^\s"'<>]+$/.test(l.url||""),pcs=d.pcs&&typeof d.pcs==="object"?d.pcs:{"PC":{updated:d.updated,links:d.links||[]}},ok=[];   // one group per PC
+  sub.textContent="From the private manga-skills repo. A link dies when its PC sleeps or restarts; run PH links on that PC again.";
+  const html=Object.entries(pcs).sort((a,b)=>a[0].localeCompare(b[0])).map(([pc,g])=>{const ls=(g.links||[]).filter(good);if(!ls.length)return "";
+    return `<div class="lpc"><i class="ti ti-device-desktop"></i> ${esc(pc)}${g.updated?` <span class="pill mut">updated ${esc(ago(Date.parse(g.updated)/1000))}</span>`:""}</div><div class="grid">${ls.map(l=>{const i=ok.push(l)-1;return `<div class="card lcard" style="--c:${esc(l.color||"#a78bfa")}"><span class="tile"><i class="ti ${esc(l.icon||"ti-link")}"></i></span>
+    <div class="bd"><div class="nm">${esc(l.name)}</div><div class="ds">${esc(l.desc||"")}</div><div class="ds mono">${esc(new URL(l.url).host)}</div>
+    <div class="lbtns"><a class="btn go1" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i><span>Open</span></a><button class="btn" data-cp="${i}"><i class="ti ti-copy"></i><span>Copy</span></button></div></div></div>`}).join("")}</div>`}).join("");
+  body.innerHTML=html||`<div class="empty">The links file is empty. On the PC run <b>PH links</b>.</div>`;
+  body.querySelectorAll("[data-cp]").forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(ok[+b.dataset.cp].url);toast("Link copied")}catch(e){toast("Copy failed: "+e.message,true)}})}
+$("linksRe").onclick=loadLinks;
 /* the chip row folds away while scrolling down the list, and comes back on the way up */
 {let ref=0;addEventListener("scroll",()=>{if(S.view!=="list")return;const y=scrollY,down=document.body.classList.contains("scrolldown");
   if(y<80){if(down)document.body.classList.remove("scrolldown");ref=y;return}
